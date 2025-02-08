@@ -130,8 +130,8 @@ do
         elapsed_time=0  # Reset elapsed time after reconnection
     fi
 
-    # Sleep for 60 seconds (1 minute)
-    sleep 60
+    # Sleep for 1 hours
+    sleep 1h
 
     # Increment elapsed time
     elapsed_time=$((elapsed_time + 60))
