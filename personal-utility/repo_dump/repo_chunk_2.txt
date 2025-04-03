@@ -1,0 +1,440 @@
+
+===== REPO STRUCTURE =====
+
+.
+├── api.py
+├── assets
+│   ├── ArchitectureDiagram.png
+│   ├── exampleaudio.mp3
+│   ├── silence_100ms.wav
+│   └── ZonosHeader.png
+├── CONDITIONING_README.md
+├── cpu_fallback_patch.py
+├── docker-compose.yml
+├── Dockerfile
+├── gradio_interface.py
+├── LICENSE
+├── personal-utility
+│   ├── dump_it.sh
+│   └── repo_dump
+│       ├── repo_chunk_1.txt
+│       └── repo_chunk_2.txt
+├── pyproject.toml
+├── README.md
+├── sample.py
+├── uv.lock
+└── zonos
+    ├── autoencoder.py
+    ├── backbone.py
+    ├── codebook_pattern.py
+    ├── conditioning.py
+    ├── config.py
+    ├── model.py
+    ├── sampling.py
+    └── speaker_cloning.py
+
+4 directories, 26 files
+
+===== FILE CONTENTS =====
+
+========================================
+File: api.py
+========================================
+import multiprocessing
+multiprocessing.set_start_method('spawn', force=True)
+
+import torch
+import torchaudio
+import os
+import json
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Form
+from pydantic import BaseModel, Field
+from typing import Dict, Optional, List, Union
+from io import BytesIO
+import numpy as np
+from cpu_fallback_patch import Zonos, DEVICE, DTYPE
+from zonos.conditioning import make_cond_dict, supported_language_codes
+from fastapi.responses import StreamingResponse
+import time
+import uuid
+
+app = FastAPI(title="Zonos API", description="OpenAI-compatible TTS API for Zonos")
+
+# Model Management
+MODELS = {
+    "transformer": None,
+    "hybrid": None
+}
+
+# Voice storage settings
+VOICE_STORAGE_DIR = os.environ.get("VOICE_STORAGE_DIR", "data/voice_storage")
+VOICE_METADATA_FILE = os.path.join(VOICE_STORAGE_DIR, "voice_metadata.json")
+VOICE_CACHE: Dict[str, torch.Tensor] = {}
+
+# Ensure voice storage directory exists
+os.makedirs(VOICE_STORAGE_DIR, exist_ok=True)
+
+def load_models():
+    """Load both models at startup and keep them in VRAM or RAM"""
+    MODELS["transformer"] = Zonos.from_pretrained("Zyphra/Zonos-v0.1-transformer")
+    MODELS["transformer"].requires_grad_(False).eval()
+    MODELS["hybrid"] = Zonos.from_pretrained("Zyphra/Zonos-v0.1-hybrid")
+    MODELS["hybrid"].requires_grad_(False).eval()
+
+def load_voice_metadata():
+    if os.path.exists(VOICE_METADATA_FILE):
+        try:
+            with open(VOICE_METADATA_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading voice metadata: {e}")
+    return {}
+
+def save_voice_metadata(metadata):
+    try:
+        with open(VOICE_METADATA_FILE, 'w') as f:
+            json.dump(metadata, f, indent=2)
+    except Exception as e:
+        print(f"Error saving voice metadata: {e}")
+
+def load_voice_embeddings():
+    metadata = load_voice_metadata()
+    for voice_id, voice_info in metadata.items():
+        tensor_path = os.path.join(VOICE_STORAGE_DIR, f"{voice_id}.pt")
+        if os.path.exists(tensor_path):
+            try:
+                VOICE_CACHE[voice_id] = torch.load(tensor_path, map_location=DEVICE)
+                print(f"Loaded voice: {voice_info.get('name', voice_id)}")
+            except Exception as e:
+                print(f"Error loading voice embedding {voice_id}: {e}")
+
+def save_voice_embedding(voice_id, embedding):
+    tensor_path = os.path.join(VOICE_STORAGE_DIR, f"{voice_id}.pt")
+    try:
+        torch.save(embedding, tensor_path)
+        return True
+    except Exception as e:
+        print(f"Error saving voice embedding {voice_id}: {e}")
+        return False
+
+def get_voice_embedding(voice_identifier):
+    if voice_identifier in VOICE_CACHE:
+        return VOICE_CACHE[voice_identifier]
+
+    metadata = load_voice_metadata()
+    for voice_id, info in metadata.items():
+        if info.get("name") == voice_identifier:
+            if voice_id in VOICE_CACHE:
+                return VOICE_CACHE[voice_id]
+
+            tensor_path = os.path.join(VOICE_STORAGE_DIR, f"{voice_id}.pt")
+            if os.path.exists(tensor_path):
+                try:
+                    embedding = torch.load(tensor_path, map_location=DEVICE)
+                    VOICE_CACHE[voice_id] = embedding
+                    return embedding
+                except Exception as e:
+                    print(f"Error loading voice {voice_id}: {e}")
+
+    return None
+
+class SpeechRequest(BaseModel):
+    model: str = Field("Zyphra/Zonos-v0.1-transformer", description="Model to use")
+    input: str = Field(..., max_length=500, description="Text to synthesize")
+    voice: Optional[str] = Field(None, description="Voice ID or name to use")
+    speed: float = Field(1.0, ge=0.5, le=2.0, description="Speaking speed multiplier")
+    language: str = Field("en-us", description="Language code")
+    emotion: Optional[Dict[str, float]] = None
+    response_format: str = Field("mp3", description="Audio format (mp3 or wav)")
+    prefix_audio: Optional[str] = Field(None, description="Voice ID or name to use as audio prefix")
+    top_k: Optional[int] = Field(None, ge=1)
+    top_p: Optional[float] = Field(None, ge=0.0, le=1.0)
+    min_p: Optional[float] = Field(0.15, ge=0.0, le=1.0)
+
+class VoiceResponse(BaseModel):
+    voice_id: str
+    name: Optional[str]
+    created: int
+
+class VoiceListResponse(BaseModel):
+    voices: List[Dict[str, Union[str, int, None]]]
+
+@app.post("/v1/audio/speech")
+async def create_speech(request: SpeechRequest):
+    try:
+        model = MODELS["transformer" if "transformer" in request.model else "hybrid"]
+        speaking_rate = 15.0 * request.speed
+
+        emotion_tensor = None
+        if request.emotion:
+            emotion_values = [
+                request.emotion.get("happiness", 1.0),
+                request.emotion.get("sadness", 0.05),
+                request.emotion.get("disgust", 0.05),
+                request.emotion.get("fear", 0.05),
+                request.emotion.get("surprise", 0.05),
+                request.emotion.get("anger", 0.05),
+                request.emotion.get("other", 0.1),
+                request.emotion.get("neutral", 0.2)
+            ]
+            emotion_tensor = torch.tensor(emotion_values).to(DEVICE).unsqueeze(0)
+
+        speaker_embedding = None
+        if request.voice:
+            speaker_embedding = get_voice_embedding(request.voice)
+            if speaker_embedding is None:
+                raise HTTPException(status_code=404, detail=f"Voice '{request.voice}' not found.")
+
+        cond_dict = make_cond_dict(
+            text=request.input,
+            language=request.language,
+            speaker=speaker_embedding,
+            emotion=emotion_tensor,
+            speaking_rate=speaking_rate,
+            device=DEVICE,
+            unconditional_keys=[] if request.emotion else ["emotion"]
+        )
+
+        conditioning = model.prepare_conditioning(cond_dict)
+
+        sampling_params = {}
+        if request.min_p is not None:
+            sampling_params['min_p'] = request.min_p
+        if request.top_k is not None:
+            sampling_params['top_k'] = request.top_k
+        if request.top_p is not None:
+            sampling_params['top_p'] = request.top_p
+
+        if not sampling_params:
+            sampling_params = dict(min_p=0.15)
+
+        codes = model.generate(
+            prefix_conditioning=conditioning,
+            max_new_tokens=86 * 30,
+            cfg_scale=2.0,
+            batch_size=1,
+            sampling_params=sampling_params
+        )
+
+        wav_out = model.autoencoder.decode(codes).cpu().detach()
+        sr_out = model.autoencoder.sampling_rate
+
+        if wav_out.dim() > 2:
+            wav_out = wav_out.squeeze()
+        if wav_out.dim() == 1:
+            wav_out = wav_out.unsqueeze(0)
+
+        buffer = BytesIO()
+        torchaudio.save(buffer, wav_out, sr_out, format=request.response_format)
+        buffer.seek(0)
+
+        return StreamingResponse(buffer, media_type=f"audio/{request.response_format}")
+
+    except Exception as e:
+        print(f"Error in /v1/audio/speech: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/v1/audio/voice")
+async def create_voice(file: UploadFile = File(...), name: Optional[str] = Form(None)):
+    try:
+        content = await file.read()
+        audio_data = BytesIO(content)
+        wav, sr = torchaudio.load(audio_data)
+
+        speaker_embedding = MODELS["transformer"].make_speaker_embedding(wav, sr)
+
+        timestamp = int(time.time())
+        voice_id = f"voice_{timestamp}_{str(uuid.uuid4())[:8]}"
+
+        VOICE_CACHE[voice_id] = speaker_embedding.to(DEVICE)
+        success = save_voice_embedding(voice_id, speaker_embedding.to(DEVICE))
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save voice embedding to disk")
+
+        metadata = load_voice_metadata()
+        metadata[voice_id] = {"created": timestamp, "name": name}
+        save_voice_metadata(metadata)
+
+        return VoiceResponse(voice_id=voice_id, name=name, created=timestamp)
+
+    except Exception as e:
+        error_msg = str(e)
+        if "cuda" in error_msg.lower():
+            error_msg = "GPU error while processing voice. Please try again."
+        elif "load" in error_msg.lower():
+            error_msg = "Failed to load audio file. Please ensure it's a valid audio format."
+        raise HTTPException(status_code=500, detail=error_msg)
+
+@app.get("/v1/audio/voices")
+async def list_voices():
+    metadata = load_voice_metadata()
+    voices = [
+        {"voice_id": voice_id, "name": info.get("name"), "created": info.get("created")}
+        for voice_id, info in metadata.items()
+    ]
+    return VoiceListResponse(voices=voices)
+
+@app.get("/v1/audio/models")
+async def list_models():
+    return {
+        "models": [
+            {"id": "Zyphra/Zonos-v0.1-transformer", "created": 1234567890, "object": "model", "owned_by": "zyphra"},
+            {"id": "Zyphra/Zonos-v0.1-hybrid", "created": 1234567890, "object": "model", "owned_by": "zyphra"}
+        ]
+    }
+
+@app.on_event("startup")
+async def startup_event():
+    load_models()
+    if DEVICE == "cpu":
+        print("\u26a0\ufe0f  Zonos running on CPU. Expect slower inference.")
+    load_voice_embeddings()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+========================================
+File: pyproject.toml
+========================================
+[project]
+name = "zonos"
+version = "0.1.0"
+description = "Text-to-speech by Zyphra"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.5.1",
+    "setuptools",
+    "packaging",
+    "inflect>=7.5.0",
+    "kanjize>=1.5.0",
+    "numpy>=2.2.2",
+    "phonemizer>=3.3.0",
+    "sudachidict-full>=20241021",
+    "sudachipy>=0.6.10",
+    "torchaudio>=2.5.1",
+    "transformers>=4.48.1",
+    "soundfile>=0.13.1",
+    "huggingface-hub>=0.28.1",
+    "gradio>=5.15.0",
+]
+
+# Note: Not actually optional. All the modeling code lives in mamba-ssm.
+# We put them here to make the two-stage installation process easier.
+[project.optional-dependencies]
+compile = [
+    "flash-attn>=2.7.3",
+    "mamba-ssm>=2.2.4",
+    "causal-conv1d>=1.5.0.post8",
+]
+
+[tool.setuptools.packages.find]
+include = ["zonos"]
+
+[tool.uv]
+no-build-isolation-package = ["flash-attn", "mamba-ssm", "causal-conv1d"]
+
+[tool.ruff]
+line-length = 120
+
+========================================
+File: CONDITIONING_README.md
+========================================
+# Conditioning explanations
+Here we will list out all the conditionings the model accepts as well as a short description and some tips for optimal use. For conditionings with a learned unconditional, they can be set to that to allow the model to infer an appropriate setting.
+### espeak
+- **Type:** `EspeakPhonemeConditioner`
+- **Description:**  
+  Responsible for cleaning, phonemicizing, tokenizing, and embedding the text provided to the model. This is the text pre-processing pipeline. If you would like to change how a word is pronounced or enter raw phonemes you can do that here.
+---
+### speaker
+- **Type:** `PassthroughConditioner`
+- **Attributes:**
+  - **cond_dim:** `128`
+  - **uncond_type:** `learned`
+  - **projection:** `linear`
+- **Description:**  
+  An embedded representation of the speakers voice. We use [these](https://huggingface.co/Zyphra/Zonos-v0.1-speaker-embedding) speaker embedding models. It can capture a surprising amount of detail from the reference clip and supports arbitrary length input. Try to input clean reference clips containing only speech. It can be valid to concatenate multiple clean samples from the same speaker into one long sample and may lead to better cloning. If the speaker clip is very long, it is advisable to cut out long speech-free background music segments if they exist. If the reference clip is yielding noisy outputs with denoising enabled we recommend doing source separation before cloning.
+---
+### emotion
+- **Type:** `FourierConditioner`
+- **Attributes:**
+  - **input_dim:** `8`
+  - **uncond_type:** `learned`
+- **Description:**  
+  Encodes emotion in an 8D vector. Included emotions are Happiness, Sadness, Disgust, Fear, Surprise, Anger, Other, Neutral in that order. This vector tends to be entangled with various other conditioning inputs. More notably, it's entangled with text based on the text sentiment (eg. Angry texts will be more effectively conditioned to be angry, but if you try to make it sound sad it will be a lot less effective). It's also entangled with pitch standard deviation since larger values there tend to correlate to more emotional utterances. It's also heavily correlated with VQScore and DNSMOS as these conditionings favor neutral speech. It's also possible to do a form of "negative prompting" by doing CFG where the unconditional branch is set to a highly neutral emotion vector instead of the true unconditional value, doing this will exaggerate the emotions as it pushes the model away from being neutral.
+---
+### fmax
+- **Type:** `FourierConditioner`
+- **Attributes:**
+  - **min_val:** `0`
+  - **max_val:** `24000`
+  - **uncond_type:** `learned`
+- **Description:**  
+  Specifies the max frequency of the audio. For best results select 22050 or 24000 as these correspond to 44.1 and 48KHz audio respectively. They should not be any different in terms of actual max frequency since the model's sampling rate is 44.1KHz but they represent different slices of data which lead to slightly different voicing. Selecting a lower value generally produces lower-quality results both in terms of acoustics and voicing.
+---
+### pitch_std
+- **Type:** `FourierConditioner`
+- **Attributes:**
+  - **min_val:** `0`
+  - **max_val:** `400`
+  - **uncond_type:** `learned`
+- **Description:**  
+  Specifies the standard deviation of the pitch of the output audio. Wider variations of pitch tend to be more correlated with expressive speech. Good values are from 20-45 for normal speech and 60-150 for expressive speech. Higher than that generally tend to be crazier samples.
+---
+### speaking_rate
+- **Type:** `FourierConditioner`
+- **Attributes:**
+  - **min_val:** `0`
+  - **max_val:** `40`
+  - **uncond_type:** `learned`
+- **Description:**  
+  Specifies the number of phonemes to be read per second. When entering a long text, it is advisable to adjust the speaking rate such that the number of phonemes is readable within the generation length. For example, if your generation length is 10 seconds, and your input is 300 phonemes, you would want either 30 phonemes per second (which is very very fast) or to generate a longer sample. The model's maximum is 30 seconds. Please note that unrealistic speaking rates can be OOD for the model and create undesirable effects, so at the 30-second limit, it can be better to cut the text short and do multiple generations than to feed the model the entire prompt and have an unrealistically low speaking rate.
+---
+### language_id
+- **Type:** `IntegerConditioner`
+- **Attributes:**
+  - **min_val:** `-1`
+  - **max_val:** `126`
+  - **uncond_type:** `learned`
+- **Description:**  
+  Indicates which language the output should be in. A mapping for these values can be found in the [conditioning section](https://github.com/Zyphra/Zonos/blob/3807c8e04bd4beaadb9502b3df1ffa4b0350e3f7/zonos/conditioning.py#L308C1-L376C21) of Zonos.
+---
+### vqscore_8
+- **Type:** `FourierConditioner`
+- **Attributes:**
+  - **input_dim:** `8`
+  - **min_val:** `0.5`
+  - **max_val:** `0.8`
+  - **uncond_type:** `learned`
+- **Description:**  
+  Encodes the desired [VQScore](https://github.com/JasonSWFu/VQscore) value for the output audio. VQScore is an unsupervised speech quality (cleanliness) estimation method that we found has superior generalization and reduced biases compared to supervised methods like DNSMOS. A good value for our model is 0.78 for high-quality speech. The eight dimensions correspond to consecutive 1/8th chunks of the audio. (eg. for an 8-second output, the first dimension represents the quality of the first second only). For inference, we generally set all 8 dimensions to the same value. This has an unfortunately strong correlation with expressiveness, so for expressive speech, we recommend setting it to unconditional.
+---
+### ctc_loss
+- **Type:** `FourierConditioner`
+- **Attributes:**
+  - **min_val:** `-1.0`
+  - **max_val:** `1000`
+  - **uncond_type:** `learned`
+- **Description:**  
+  Encodes loss values from a [CTC](https://en.wikipedia.org/wiki/Connectionist_temporal_classification) (Connectionist Temporal Classification) setup, this indicates how well the training-time transcription matched with the audio according to a CTC model. For inference always use low values (eg. 0.0 or 1.0)
+---
+### dnsmos_ovrl
+- **Type:** `FourierConditioner`
+- **Attributes:**
+  - **min_val:** `1`
+  - **max_val:** `5`
+  - **uncond_type:** `learned`
+- **Description:**  
+  A [MOS](https://arxiv.org/abs/2110.01763) score for the output audio. This is similar to VQScore and tends to have a stronger entanglement with emotions. It additionally has a strong entanglement with languages. Set to 4.0 for very clean and neutral English speech, else we recommend setting it to unconditional.
+---
+### speaker_noised
+- **Type:** `IntegerConditioner`
+- **Attributes:**
+  - **min_val:** `0`
+  - **max_val:** `1`
+  - **uncond_type:** `learned`
+- **Description:**  
+  Indicates if the speaker embedding is noisy or not. If checked this lets the model clean (denoise) the input speaker embedding. When this is set to True, VQScore and DNSMOS will have a lot more power to clean the speaker embedding, so for very noisy input samples we recommend setting this to True and specifying a high VQScore value. If your speaker cloning outputs sound echo-y or do weird things, setting this to True will help.
+
