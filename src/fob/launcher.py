@@ -9,12 +9,7 @@ from fob.guardrails import check_branch
 from fob.bootstrap import get_claude_command
 
 
-def _build_pane_command(cwd: str, cmd: str) -> str:
-    """Wrap a command so the pane keeps a shell alive on exit."""
-    return f"cd '{cwd}' && ( {cmd} ); exec bash -l"
-
-
-def generate_layout(profile: dict, template_path: Path, fob_dir: Path) -> Path:
+def generate_layout(profile: dict, fob_dir: Path) -> Path:
     repo = profile["repo_root"]
     panes = profile.get("panes", {})
 
@@ -47,6 +42,12 @@ def generate_layout(profile: dict, template_path: Path, fob_dir: Path) -> Path:
     }}
 }}
 """
+    # Persist layout to .fob/ so edits survive session death
+    repo_root = Path(repo)
+    fob_state = repo_root / ".fob"
+    if fob_state.exists():
+        (fob_state / "layout-state.kdl").write_text(layout)
+
     tmp = Path(tempfile.gettempdir()) / f"fob-brief-{profile['session_name']}.kdl"
     tmp.write_text(layout)
     return tmp
@@ -56,10 +57,9 @@ def attach(session_name: str) -> None:
     os.execvp("zellij", ["zellij", "attach", session_name])
 
 
-def launch(profile: dict, fob_dir: Path) -> None:
+def launch(profile: dict, fob_dir: Path, reset_layout: bool = False) -> None:
     repo_root = Path(profile["repo_root"])
     session_name = profile["session_name"]
-    template_path = fob_dir / "zellij" / "layouts" / "brief.kdl"
 
     check_branch(repo_root)
 
@@ -67,8 +67,16 @@ def launch(profile: dict, fob_dir: Path) -> None:
         print(f"  → Attaching to existing session: {session_name}")
         attach(session_name)
     else:
-        layout_path = generate_layout(profile, template_path, fob_dir)
-        print(f"  → Creating session: {session_name}")
+        saved = repo_root / ".fob" / "layout-state.kdl"
+        if not reset_layout and saved.exists():
+            layout_path = saved
+            print(f"  → Restoring saved layout")
+        else:
+            layout_path = generate_layout(profile, fob_dir)
+            if reset_layout:
+                print(f"  → Reset layout from profile defaults")
+            else:
+                print(f"  → Creating session: {session_name}")
         print(f"  → Layout: {layout_path}")
         os.execvp(
             "zellij",

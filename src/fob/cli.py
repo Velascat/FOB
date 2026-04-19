@@ -38,6 +38,7 @@ def show_help(_: list[str]) -> None:
     sections = [
         ("BRIEF", [
             ("brief [profile]", "Launch Zellij workspace           (default: default)"),
+            ("brief --reset-layout", "Regenerate layout from profile, discarding saved state"),
             ("attach  [profile]", "Attach to existing Zellij session"),
             ("init    [repo]",    "Initialize .fob/ state files in repo"),
             ("resume",            "Print Claude resume context from .fob/"),
@@ -111,10 +112,12 @@ def main() -> None:
         case "brief":
             _require_zellij()
             profile_name = args[0] if args else "default"
-            force_branch = "--force-branch" in args
+            reset_layout = "--reset-layout" in args
             from fob.profile_loader import load_profile, validate_profile
             from fob.launcher import launch
-            from fob.bootstrap import ensure_claude_md
+            from fob.bootstrap import (
+                ensure_claude_md, write_bootstrap_file, ensure_zellij_serialization,
+            )
             from pathlib import Path
             try:
                 profile = load_profile(profile_name, PROFILES_DIR)
@@ -126,17 +129,35 @@ def main() -> None:
                 for e in errs:
                     print(c(f"  · {e}", "DIM"))
                 sys.exit(1)
-            # Init .fob/ if missing
+
+            # Resolve bootstrap_files and peer repos from profile
+            claude_cfg = profile.get("claude", {})
+            bootstrap_files = claude_cfg.get("bootstrap_files") or None
+            peer_roots: list[tuple[str, Path]] = []
+            for peer_name in claude_cfg.get("peers", []):
+                try:
+                    peer = load_profile(peer_name, PROFILES_DIR)
+                    peer_roots.append((peer["name"], Path(peer["repo_root"])))
+                except Exception:
+                    print(c(f"  ⚠ peer profile '{peer_name}' not found — skipping", "YLW"))
+
+            # Init .fob/ if missing, then write mission brief
             repo_root = Path(profile["repo_root"])
             if not (repo_root / ".fob").exists():
                 print(c("  .fob/ not found — initializing...", "YLW"))
                 commands.cmd_init([str(repo_root)], FOB_DIR)
-            else:
-                from fob.bootstrap import write_bootstrap_file
-                write_bootstrap_file(repo_root)
-            ensure_claude_md(repo_root, FOB_DIR / "templates" / "mission")
+            write_bootstrap_file(repo_root, files=bootstrap_files, peer_roots=peer_roots or None)
+
+            extra_files = [f for f in (bootstrap_files or [])
+                           if Path(f).name not in {
+                               "standing-orders.md", "active-mission.md",
+                               "objectives.md", "mission-log.md",
+                           }]
+            ensure_claude_md(repo_root, FOB_DIR / "templates" / "mission",
+                             extra_files=extra_files or None)
+            ensure_zellij_serialization()
             print(c(f"\n  Brief: {profile['name']}", "B", "CYN"))
-            launch(profile, FOB_DIR)
+            launch(profile, FOB_DIR, reset_layout=reset_layout)
 
         case "attach":
             _require_zellij()

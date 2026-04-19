@@ -2,6 +2,15 @@ name: default
 session_name: brief-default
 repo_root: /home/dev/Documents/GitHub/VideoFoundry
 
+claude:
+  continue: true
+  bootstrap_files:
+    - .fob/standing-orders.md
+    - .fob/active-mission.md
+    - .fob/objectives.md
+    - .fob/mission-log.md
+  peers: []
+
 panes:
   claude:
     cwd: /home/dev/Documents/GitHub/VideoFoundry
