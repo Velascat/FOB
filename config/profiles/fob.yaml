@@ -1,0 +1,23 @@
+name: fob
+repo_root: /home/dev/Documents/GitHub/FOB
+
+claude:
+  continue: true
+  bootstrap_files:
+    - .fob/standing-orders.md
+    - .fob/active-mission.md
+    - .fob/objectives.md
+    - .fob/mission-log.md
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  logs:
+    command: tail -f .fob/runtime.log 2>/dev/null
+  shell:
+    command: bash
+
+helpers:
+  test: python3 -m pytest tests/ -x -v
+  audit: ruff check src/
