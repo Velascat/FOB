@@ -191,7 +191,7 @@ def main() -> None:
             commands.cmd_audit(args, _load_default_profile())
 
         case "doctor":
-            commands.cmd_doctor(args)
+            commands.cmd_doctor(args, SCRIPTS_DIR)
 
         case "vf":
             commands.cmd_vf(args, VF_DIR)

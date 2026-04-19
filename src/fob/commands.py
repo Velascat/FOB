@@ -195,23 +195,46 @@ DEPS = [
 ]
 
 
-def cmd_doctor(args: list[str]) -> None:
+def cmd_doctor(args: list[str], scripts_dir: Path | None = None) -> None:
     print()
     print(c("  DEPENDENCY CHECK", "B", "CYN"))
     print(hr())
-    all_ok = True
+    missing = []
     for binary, desc in DEPS:
         found = _which(binary)
         if found:
             print(f"  {c('✓', 'GRN')} {c(binary, 'B'):<20}  {c(found, 'DIM')}")
         else:
-            all_ok = False
+            missing.append(binary)
             print(f"  {c('✗', 'YLW')} {c(binary, 'B'):<20}  {c('not found', 'DIM')}  ←  {desc}")
     print()
-    if all_ok:
+    if not missing:
         print(c("  All dependencies found.", "GRN"))
-    else:
-        print(c("  Install missing tools, then re-run: fob doctor", "YLW"))
+        print()
+        return
+
+    # zellij and claude need manual install; rice.sh handles the rest
+    rice_missing = [b for b in missing if b not in ("zellij", "claude")]
+    manual_missing = [b for b in missing if b in ("zellij", "claude")]
+
+    if manual_missing:
+        for b in manual_missing:
+            desc = next(d for n, d in DEPS if n == b)
+            print(c(f"  {b}: manual install required — {desc}", "YLW"))
+        print()
+
+    if rice_missing and scripts_dir:
+        print(c(f"  Missing: {', '.join(rice_missing)}", "YLW"))
+        try:
+            answer = input(c("  Install now via fob rice? [y/N] ", "B"))
+        except (EOFError, KeyboardInterrupt):
+            answer = ""
+        if answer.strip().lower() == "y":
+            os.execvp("bash", ["bash", str(scripts_dir / "rice.sh"), "install"])
+        else:
+            print(c("  Run: fob rice  to install when ready", "DIM"))
+    elif rice_missing:
+        print(c("  Run: fob rice  to install missing tools", "YLW"))
     print()
 
 
