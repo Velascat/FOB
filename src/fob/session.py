@@ -18,7 +18,7 @@ def list_sessions() -> list[str]:
         sessions = []
         for line in r.stdout.strip().splitlines():
             clean = _ANSI.sub("", line).strip()
-            if clean:
+            if clean and "EXITED" not in clean:
                 sessions.append(clean.split()[0])
         return sessions
     except FileNotFoundError:
