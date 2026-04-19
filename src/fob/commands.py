@@ -188,64 +188,95 @@ def cmd_audit(args: list[str], default_profile: dict | None) -> None:
 # ── doctor ────────────────────────────────────────────────────────────────────
 
 DEPS = [
-    ("zellij", "Terminal workspace manager — https://zellij.dev"),
-    ("claude", "Claude Code CLI — https://claude.ai/code"),
-    ("lazygit", "Git TUI — brew install lazygit / apt install lazygit"),
-    ("git", "Version control"),
-    ("python3", "Python 3.x runtime"),
-    ("fzf", "Fuzzy finder"),
+    ("zellij",  ["zellij"],          "Terminal workspace manager — https://zellij.dev"),
+    ("claude",  ["claude"],           "Claude Code CLI — https://claude.ai/code"),
+    ("lazygit", ["lazygit"],          "Git TUI — brew install lazygit / apt install lazygit"),
+    ("git",     ["git"],              "Version control"),
+    ("python3", ["python3"],          "Python 3.x runtime"),
+    ("fzf",     ["fzf"],              "Fuzzy finder"),
+]
+
+# Mirror of rice.sh TOOLS — name, binary alternatives, description
+RICE_TOOLS = [
+    ("fzf",       ["fzf"],              "Fuzzy finder — Ctrl+R, file & dir search"),
+    ("bat",       ["bat", "batcat"],    "Syntax-highlighted cat"),
+    ("eza",       ["eza"],              "Modern ls — colors, icons, git status"),
+    ("ripgrep",   ["rg"],               "Fast grep for codebases"),
+    ("fd",        ["fd", "fdfind"],     "Smarter find"),
+    ("zoxide",    ["zoxide"],           "Smart cd — jump with z"),
+    ("delta",     ["delta"],            "Beautiful git diffs"),
+    ("lazygit",   ["lazygit"],          "Full git TUI"),
+    ("btop",      ["btop"],             "System monitor"),
+    ("starship",  ["starship"],         "Cross-shell prompt"),
+    ("fastfetch", ["fastfetch"],        "System info display"),
 ]
 
 
 def cmd_doctor(args: list[str], scripts_dir: Path | None = None) -> None:
     print()
-    print(c("  DEPENDENCY CHECK", "B", "CYN"))
+    print(c("  CORE DEPENDENCIES", "B", "CYN"))
     print(hr())
-    missing = []
-    for binary, desc in DEPS:
-        found = _which(binary)
+    missing_core = []
+    for name, binaries, desc in DEPS:
+        found = _which_any(binaries)
         if found:
-            print(f"  {c('✓', 'GRN')} {c(binary, 'B'):<20}  {c(found, 'DIM')}")
+            print(f"  {c('✓', 'GRN')} {c(name, 'B'):<20}  {c(found, 'DIM')}")
         else:
-            missing.append(binary)
-            print(f"  {c('✗', 'YLW')} {c(binary, 'B'):<20}  {c('not found', 'DIM')}  ←  {desc}")
+            missing_core.append(name)
+            print(f"  {c('✗', 'YLW')} {c(name, 'B'):<20}  {c('not found', 'DIM')}  ←  {desc}")
     print()
-    if not missing:
-        print(c("  All dependencies found.", "GRN"))
+
+    print(c("  TERMINAL TOOLS", "B", "CYN"))
+    print(hr())
+    missing_rice = []
+    for name, binaries, desc in RICE_TOOLS:
+        found = _which_any(binaries)
+        if found:
+            print(f"  {c('✓', 'GRN')} {c(name, 'B'):<20}  {c(found, 'DIM')}")
+        else:
+            missing_rice.append(name)
+            print(f"  {c('✗', 'DIM')} {c(name, 'DIM'):<20}  {c(desc, 'DIM')}")
+    print()
+
+    if not missing_core and not missing_rice:
+        print(c("  All tools found.", "GRN"))
         print()
         return
 
-    # zellij and claude need manual install; rice.sh handles the rest
-    rice_missing = [b for b in missing if b not in ("zellij", "claude")]
-    manual_missing = [b for b in missing if b in ("zellij", "claude")]
+    manual_missing = [n for n in missing_core if n in ("zellij", "claude")]
+    rice_installable = [n for n in missing_core if n not in ("zellij", "claude")] + missing_rice
 
-    if manual_missing:
-        for b in manual_missing:
-            desc = next(d for n, d in DEPS if n == b)
-            print(c(f"  {b}: manual install required — {desc}", "YLW"))
-        print()
+    if missing_core:
+        if manual_missing:
+            for name in manual_missing:
+                desc = next(d for n, _, d in DEPS if n == name)
+                print(c(f"  {name}: manual install required — {desc}", "YLW"))
+            print()
 
-    if rice_missing and scripts_dir:
-        print(c(f"  Missing: {', '.join(rice_missing)}", "YLW"))
+    if rice_installable and scripts_dir:
+        print(c(f"  {len(rice_installable)} tool(s) missing — fob rice can install them", "YLW"))
         try:
-            answer = input(c("  Install now via fob rice? [y/N] ", "B"))
+            answer = input(c("  Install now? [y/N] ", "B"))
         except (EOFError, KeyboardInterrupt):
             answer = ""
         if answer.strip().lower() == "y":
             os.execvp("bash", ["bash", str(scripts_dir / "rice.sh"), "install"])
         else:
             print(c("  Run: fob rice  to install when ready", "DIM"))
-    elif rice_missing:
+    elif rice_installable:
         print(c("  Run: fob rice  to install missing tools", "YLW"))
     print()
 
 
-def _which(binary: str) -> str | None:
-    try:
-        r = subprocess.run(["which", binary], capture_output=True, text=True)
-        return r.stdout.strip() if r.returncode == 0 else None
-    except Exception:
-        return None
+def _which_any(binaries: list[str]) -> str | None:
+    for binary in binaries:
+        try:
+            r = subprocess.run(["which", binary], capture_output=True, text=True)
+            if r.returncode == 0:
+                return r.stdout.strip()
+        except Exception:
+            pass
+    return None
 
 
 # ── vf ────────────────────────────────────────────────────────────────────────
