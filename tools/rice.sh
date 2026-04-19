@@ -88,15 +88,46 @@ install_lazygit() {
   rm -f /tmp/lazygit.tar.gz /tmp/lazygit
 }
 
+install_eza() {
+  echo -e "${CYN}▶ Installing eza from GitHub releases...${R}"
+  local url="https://github.com/eza-community/eza/releases/latest/download/eza_x86_64-unknown-linux-musl.tar.gz"
+  curl -Lo /tmp/eza.tar.gz "$url"
+  tar xf /tmp/eza.tar.gz -C /tmp eza
+  sudo install /tmp/eza /usr/local/bin/eza
+  rm -f /tmp/eza.tar.gz /tmp/eza
+}
+
+install_delta() {
+  echo -e "${CYN}▶ Installing git-delta from GitHub releases...${R}"
+  local ver
+  ver=$(curl -s "https://api.github.com/repos/dandavison/delta/releases/latest" \
+    | grep '"tag_name"' | cut -d'"' -f4)
+  curl -Lo /tmp/delta.deb \
+    "https://github.com/dandavison/delta/releases/latest/download/git-delta_${ver}_amd64.deb"
+  sudo dpkg -i /tmp/delta.deb
+  rm -f /tmp/delta.deb
+}
+
+install_fastfetch() {
+  echo -e "${CYN}▶ Installing fastfetch from GitHub releases...${R}"
+  curl -Lo /tmp/fastfetch.deb \
+    "https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-amd64.deb"
+  sudo dpkg -i /tmp/fastfetch.deb
+  rm -f /tmp/fastfetch.deb
+}
+
 install_all_missing() {
   local apt_pkgs=()
   for entry in "${TOOLS[@]}"; do
     IFS='|' read -r name pkg check_alts _desc <<< "$entry"
     tool_installed "$check_alts" && continue
     case "$name" in
-      starship) install_starship ;;
-      lazygit)  install_lazygit ;;
-      *)        apt_pkgs+=("$pkg") ;;
+      starship)  install_starship ;;
+      lazygit)   install_lazygit ;;
+      eza)       install_eza ;;
+      delta)     install_delta ;;
+      fastfetch) install_fastfetch ;;
+      *)         apt_pkgs+=("$pkg") ;;
     esac
   done
   if [[ ${#apt_pkgs[@]} -gt 0 ]]; then
