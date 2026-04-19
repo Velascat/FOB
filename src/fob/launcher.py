@@ -75,6 +75,7 @@ def generate_session_layout(profiles: list[dict], fob_dir: Path) -> Path:
 
 def generate_tab_layout(profile: dict, fob_dir: Path) -> Path:
     """Tab layout for adding to an existing session (panes only)."""
+    name = profile["name"]
     panes = _pane_block(profile, fob_dir, indent="    ")
     layout = (
         'layout {\n'
