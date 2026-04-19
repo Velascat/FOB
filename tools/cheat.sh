@@ -120,9 +120,10 @@ CMD "fd -t d <name>"      "find directories only"
 echo
 
 hr
-echo -e "  ${DIM}Ctrl+p f to toggle floating  ·  Ctrl+p x to close  ·  q to quit${R}"
+echo -e "  ${DIM}Ctrl+p f to toggle floating  ·  Ctrl+s to scroll  ·  Ctrl+p x to close${R}"
 hr
 echo
 }
 
-LESSCHARSET=utf-8 _cheat_content | less -r
+_cheat_content
+read -rsp "" 2>/dev/null || true
