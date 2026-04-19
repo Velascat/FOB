@@ -166,8 +166,11 @@ def launch(profiles: list[dict], fob_dir: Path, reset_layout: bool = False) -> N
                 "--name", profile["name"],
                 "--layout", str(layout_path),
             ])
-        print(f"  → Attached to session: {FOB_SESSION}")
-        attach(FOB_SESSION)
+        if os.environ.get("ZELLIJ"):
+            print(f"  → Tab added")
+        else:
+            print(f"  → Attaching to session: {FOB_SESSION}")
+            attach(FOB_SESSION)
     else:
         saved = Path(profiles[0]["repo_root"]) / ".fob" / "layout-state.kdl"
         if not reset_layout and saved.exists():

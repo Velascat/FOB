@@ -164,16 +164,17 @@ def _pick_profiles() -> list[str]:
         print(c("✗ No profiles found in config/profiles/", "RED"))
         sys.exit(1)
 
-    # Auto-select if cwd is inside a profile's repo_root
-    cwd = Path.cwd()
-    for name in profiles:
-        try:
-            data = yaml.safe_load((PROFILES_DIR / f"{name}.yaml").read_text())
-            repo = Path(data.get("repo_root", "")).expanduser().resolve()
-            if cwd == repo or cwd.is_relative_to(repo):
-                return [name]
-        except Exception:
-            pass
+    # Auto-select by cwd only when launching from outside Zellij
+    if not os.environ.get("ZELLIJ"):
+        cwd = Path.cwd()
+        for name in profiles:
+            try:
+                data = yaml.safe_load((PROFILES_DIR / f"{name}.yaml").read_text())
+                repo = Path(data.get("repo_root", "")).expanduser().resolve()
+                if cwd == repo or cwd.is_relative_to(repo):
+                    return [name]
+            except Exception:
+                pass
 
     session_running = session_exists(FOB_SESSION)
 
