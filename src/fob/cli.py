@@ -110,7 +110,7 @@ def show_help(_: list[str]) -> None:
         ("BRIEF", [
             ("brief [profile]", "Pick or launch a workspace profile"),
             ("brief --reset-layout", "Regenerate layout from profile, discarding saved state"),
-            ("attach  [profile]", "Attach to existing Zellij session"),
+            ("attach",            "Re-attach to the fob Zellij session"),
             ("init    [repo]",    "Initialize .fob/ state files in repo"),
             ("resume",            "Print Claude resume context from .fob/"),
             ("doctor",            "Check dependencies (Zellij, Claude, lazygit…)"),
@@ -152,30 +152,22 @@ def _load_default_profile() -> dict | None:
         return None
 
 
-def _pick_profile() -> str:
+def _pick_profiles() -> list[str]:
     import subprocess
-    import yaml
-    from fob.session import list_sessions
+    from fob.session import session_exists
+    from fob.launcher import FOB_SESSION
 
     profiles = sorted(p.stem for p in PROFILES_DIR.glob("*.yaml"))
     if not profiles:
         print(c("✗ No profiles found in config/profiles/", "RED"))
         sys.exit(1)
     if len(profiles) == 1:
-        return profiles[0]
+        return profiles
 
-    running_sessions = set(list_sessions())
+    session_running = session_exists(FOB_SESSION)
 
-    entries = []
-    for name in profiles:
-        try:
-            data = yaml.safe_load((PROFILES_DIR / f"{name}.yaml").read_text())
-            is_running = data.get("session_name", "") in running_sessions
-        except Exception:
-            is_running = False
-        entries.append((name, is_running))
+    entries = [(name, session_running) for name in profiles]
 
-    # fzf picker
     try:
         result = subprocess.run(["fzf", "--version"], capture_output=True)
         has_fzf = result.returncode == 0
@@ -183,40 +175,46 @@ def _pick_profile() -> str:
         has_fzf = False
 
     if has_fzf:
-        fzf_lines = "\n".join(
-            f"{'● ' if r else '○ '}{n}{'  (running)' if r else ''}"
-            for n, r in entries
-        )
+        session_label = c("  (session running)", "GRN") if session_running else ""
+        fzf_lines = "\n".join(f"{'● ' if session_running else '○ '}{n}" for n in profiles)
         result = subprocess.run(
-            ["fzf", "--prompt", "  brief > ", "--height", "~10",
-             "--border", "--ansi", "--no-sort"],
+            ["fzf", "--prompt", "  brief > ", "--height", "~12",
+             "--border", "--ansi", "--no-sort",
+             "--multi", "--bind", "tab:toggle+down",
+             "--header", f"Tab to select multiple · Enter to open{session_label}"],
             input=fzf_lines, text=True, capture_output=True,
         )
         if result.returncode != 0 or not result.stdout.strip():
             sys.exit(0)
-        return result.stdout.strip().lstrip("●○ ").split("  ")[0].strip()
+        return [line.lstrip("●○ ").strip() for line in result.stdout.strip().splitlines()]
 
     # Numbered menu fallback
     print()
-    print(c("  SELECT PROFILE", "B", "CYN"))
-    print(c("─" * 40, "DIM"))
-    for i, (name, is_running) in enumerate(entries, 1):
-        dot = c("●", "GRN") if is_running else c("○", "DIM")
-        suffix = c("  running", "GRN") if is_running else ""
-        print(f"  {c(str(i), 'CYN')}  {dot}  {name}{suffix}")
+    print(c("  SELECT PROFILES", "B", "CYN"))
+    if session_running:
+        print(c(f"  session '{FOB_SESSION}' is running — selected profiles open as new tabs", "GRN"))
+    print(c("─" * 44, "DIM"))
+    dot = c("●", "GRN") if session_running else c("○", "DIM")
+    for i, name in enumerate(profiles, 1):
+        print(f"  {c(str(i), 'CYN')}  {dot}  {name}")
     print()
+    print(c("  Enter numbers separated by spaces (e.g. 1 2)", "DIM"))
     try:
-        choice = input(c("  profile: ", "B")).strip()
+        choice = input(c("  profiles: ", "B")).strip()
     except (EOFError, KeyboardInterrupt):
         print()
         sys.exit(0)
 
-    if choice.isdigit() and 1 <= int(choice) <= len(entries):
-        return entries[int(choice) - 1][0]
-    if choice in profiles:
-        return choice
-    print(c("✗ Invalid selection", "RED"))
-    sys.exit(1)
+    selected = []
+    for token in choice.replace(",", " ").split():
+        if token.isdigit() and 1 <= int(token) <= len(profiles):
+            selected.append(profiles[int(token) - 1])
+        elif token in profiles:
+            selected.append(token)
+    if not selected:
+        print(c("✗ No valid selection", "RED"))
+        sys.exit(1)
+    return selected
 
 
 def _require_zellij() -> None:
@@ -256,68 +254,66 @@ def main() -> None:
             _require_zellij()
             reset_layout = "--reset-layout" in args
             named = [a for a in args if not a.startswith("--")]
-            profile_name = named[0] if named else _pick_profile()
             from fob.profile_loader import load_profile, validate_profile
             from fob.launcher import launch
             from fob.bootstrap import (
                 ensure_claude_md, write_bootstrap_file, ensure_zellij_serialization,
             )
             from pathlib import Path
-            try:
-                profile = load_profile(profile_name, PROFILES_DIR)
-            except FileNotFoundError as e:
-                print(c(f"✗ {e}", "RED")); sys.exit(1)
-            errs = validate_profile(profile)
-            if errs:
-                print(c("✗ Profile validation errors:", "RED"))
-                for e in errs:
-                    print(c(f"  · {e}", "DIM"))
-                sys.exit(1)
 
-            # Resolve bootstrap_files and peer repos from profile
-            claude_cfg = profile.get("claude", {})
-            bootstrap_files = claude_cfg.get("bootstrap_files") or None
-            peer_roots: list[tuple[str, Path]] = []
-            for peer_name in claude_cfg.get("peers", []):
+            profile_names = named if named else _pick_profiles()
+            profiles = []
+            for pname in profile_names:
                 try:
-                    peer = load_profile(peer_name, PROFILES_DIR)
-                    peer_roots.append((peer["name"], Path(peer["repo_root"])))
-                except Exception:
-                    print(c(f"  ⚠ peer profile '{peer_name}' not found — skipping", "YLW"))
+                    p = load_profile(pname, PROFILES_DIR)
+                except FileNotFoundError as e:
+                    print(c(f"✗ {e}", "RED")); sys.exit(1)
+                errs = validate_profile(p)
+                if errs:
+                    print(c(f"✗ Profile '{pname}' validation errors:", "RED"))
+                    for e in errs:
+                        print(c(f"  · {e}", "DIM"))
+                    sys.exit(1)
+                profiles.append(p)
 
-            # Init .fob/ if missing, then write mission brief
-            repo_root = Path(profile["repo_root"])
-            if not (repo_root / ".fob").exists():
-                print(c("  .fob/ not found — initializing...", "YLW"))
-                commands.cmd_init([str(repo_root)], FOB_DIR)
-            write_bootstrap_file(repo_root, files=bootstrap_files, peer_roots=peer_roots or None)
+            for profile in profiles:
+                claude_cfg = profile.get("claude", {})
+                bootstrap_files = claude_cfg.get("bootstrap_files") or None
+                peer_roots: list[tuple[str, Path]] = []
+                for peer_name in claude_cfg.get("peers", []):
+                    try:
+                        peer = load_profile(peer_name, PROFILES_DIR)
+                        peer_roots.append((peer["name"], Path(peer["repo_root"])))
+                    except Exception:
+                        print(c(f"  ⚠ peer '{peer_name}' not found — skipping", "YLW"))
 
-            extra_files = [f for f in (bootstrap_files or [])
-                           if Path(f).name not in {
-                               "standing-orders.md", "active-mission.md",
-                               "objectives.md", "mission-log.md",
-                           }]
-            ensure_claude_md(repo_root, FOB_DIR / "templates" / "mission",
-                             extra_files=extra_files or None)
+                repo_root = Path(profile["repo_root"])
+                if not (repo_root / ".fob").exists():
+                    print(c(f"  .fob/ not found in {profile['name']} — initializing...", "YLW"))
+                    commands.cmd_init([str(repo_root)], FOB_DIR)
+                write_bootstrap_file(repo_root, files=bootstrap_files, peer_roots=peer_roots or None)
+
+                extra_files = [f for f in (bootstrap_files or [])
+                               if Path(f).name not in {
+                                   "standing-orders.md", "active-mission.md",
+                                   "objectives.md", "mission-log.md",
+                               }]
+                ensure_claude_md(repo_root, FOB_DIR / "templates" / "mission",
+                                 extra_files=extra_files or None)
+
             ensure_zellij_serialization()
-            print(c(f"\n  Brief: {profile['name']}", "B", "CYN"))
-            launch(profile, FOB_DIR, reset_layout=reset_layout)
+            names = ", ".join(p["name"] for p in profiles)
+            print(c(f"\n  Brief: {names}", "B", "CYN"))
+            launch(profiles, FOB_DIR, reset_layout=reset_layout)
 
         case "attach":
             _require_zellij()
-            profile_name = args[0] if args else "default"
-            from fob.profile_loader import load_profile
-            from fob.launcher import attach
+            from fob.launcher import attach, FOB_SESSION
             from fob.session import session_exists
-            try:
-                profile = load_profile(profile_name, PROFILES_DIR)
-            except FileNotFoundError as e:
-                print(c(f"✗ {e}", "RED")); sys.exit(1)
-            sn = profile["session_name"]
-            if not session_exists(sn):
-                print(c(f"✗ No session named '{sn}'. Run: fob brief {profile_name}", "RED"))
+            if not session_exists(FOB_SESSION):
+                print(c(f"✗ No session '{FOB_SESSION}'. Run: fob brief", "RED"))
                 sys.exit(1)
-            attach(sn)
+            attach(FOB_SESSION)
 
         case "init":
             commands.cmd_init(args, FOB_DIR)

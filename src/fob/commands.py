@@ -73,11 +73,13 @@ def cmd_status(args: list[str], fob_dir: Path, default_profile: dict | None) -> 
     if branch in PROTECTED_BRANCHES:
         branch_disp = c(f"{branch}  ⚠ protected", "YLW", "B")
 
+    from fob.launcher import FOB_SESSION
     sessions = list_sessions()
-    session_disp = ", ".join(sessions) if sessions else c("none", "DIM")
+    fob_running = FOB_SESSION in sessions
+    session_disp = (c(f"{FOB_SESSION}  (running)", "GRN") if fob_running
+                    else c(f"{FOB_SESSION}  (stopped)", "DIM"))
 
     profile_name = default_profile.get("name", "—") if default_profile else c("none loaded", "DIM")
-    session_name = default_profile.get("session_name", "—") if default_profile else "—"
 
     print(hr())
     print(c("  STATUS", "B", "CYN"))
@@ -85,8 +87,8 @@ def cmd_status(args: list[str], fob_dir: Path, default_profile: dict | None) -> 
     print(f"  {c('cwd         ', 'DIM')} {cwd}")
     print(f"  {c('repo        ', 'DIM')} {repo_root}")
     print(f"  {c('branch      ', 'DIM')} {branch_disp}")
-    print(f"  {c('profile     ', 'DIM')} {profile_name}  →  session: {session_name}")
-    print(f"  {c('zellij      ', 'DIM')} {session_disp}")
+    print(f"  {c('profile     ', 'DIM')} {profile_name}")
+    print(f"  {c('session     ', 'DIM')} {session_disp}")
     print()
 
     claude_dir = repo_root / ".fob"
