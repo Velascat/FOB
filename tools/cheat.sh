@@ -125,4 +125,4 @@ hr
 echo
 }
 
-_cheat_content | less -r
+LESSCHARSET=utf-8 _cheat_content | less -r
