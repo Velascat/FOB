@@ -4,9 +4,9 @@
 
 ```
 fob (shell wrapper)
-└── src/fob/cli.py              ← main dispatcher
+└── src/fob/cli.py              ← main dispatcher + repo discovery + profile picker
     ├── profile_loader.py       ← YAML profile loading + validation
-    ├── launcher.py             ← Zellij session creation/attachment
+    ├── launcher.py             ← Zellij session creation / tab management
     ├── session.py              ← Zellij session state queries
     ├── guardrails.py           ← branch detection + warnings
     ├── bootstrap.py            ← Claude mission brief generation
@@ -15,24 +15,33 @@ fob (shell wrapper)
 
 ## Launcher Flow
 
-`fob brief default`:
+`fob brief`:
 
-1. Load `config/profiles/default.yaml` via `profile_loader.py`
-2. Validate profile fields and `repo_root` path
-3. Initialize `.fob/` files from templates if missing (`fob init`)
-4. Write `.fob/.briefing` — current mission brief for Claude
-5. Ensure `CLAUDE.md` in repo references `.fob/` files
+1. Scan `~/Documents/GitHub/` for git repos; overlay any YAML profiles from `config/profiles/`
+2. If outside Zellij and cwd is inside a known repo → auto-select that repo
+3. Otherwise show interactive picker (fzf or numbered menu); Tab to multi-select
+4. For each selected repo: initialize `.fob/` if missing, write `.fob/.briefing`, ensure `CLAUDE.md`
+5. Ensure Zellij serialization is enabled in `~/.config/zellij/config.kdl`
 6. Check branch via `guardrails.py` — warn if on main/master
-7. If Zellij session exists → `zellij attach <session_name>`
-8. Otherwise → generate dynamic KDL, `zellij --session <name> --new-session-with-layout <kdl>`
+7. If session `fob` exists → add each repo as a new named tab (skip if tab already open)
+8. Otherwise → generate KDL layout with `default_tab_template` chrome, launch `zellij --session fob --new-session-with-layout <kdl>`
 
 ## Zellij Session Model
 
-FOB uses named sessions: `brief-<profile-name>`. Sessions survive terminal close and SSH disconnects.
+FOB uses a **single named session**: `fob`. Each project opens as a **named tab** within that session.
 
-The dynamic layout is generated at launch time by `launcher.generate_layout()` and written to `/tmp/fob-brief-<session>.kdl`, then passed to Zellij via `--new-session-with-layout`.
+- Session survives terminal close, SSH disconnects, and reboots (Zellij serialization)
+- Tab bar and status bar are present in every tab via explicit chrome panes in each layout
+- `fob brief` from inside the running session adds tabs without re-attaching
+- Dead (EXITED) sessions are auto-deleted before creating a new one
+- `fob exit` kills the session and all panes
 
-Pane arrangement:
+Layout files:
+- Session start: `/tmp/fob-session.kdl` — includes `default_tab_template` + named first tab; saved to `.fob/layout-state.kdl`
+- New tabs: `/tmp/fob-tab-<name>.kdl` — panes + explicit chrome (tab-bar/status-bar)
+- `fob brief --reset-layout` regenerates from defaults, ignoring saved state
+
+Pane arrangement per tab:
 - **Left 60%**: Claude pane (`claude --continue`)
 - **Top-right 34%**: Git pane (`lazygit`)
 - **Mid-right 33%**: Logs pane (`tail -f .fob/runtime.log`)
@@ -40,13 +49,23 @@ Pane arrangement:
 
 ## Profiles
 
-Profiles live in `config/profiles/<name>.yaml`. They define:
-- `repo_root` — absolute path to the target repo
-- `session_name` — Zellij session name
-- `panes.*` — per-pane `cwd` and `command` overrides
+Profiles live in `config/profiles/<name>.yaml`. They are **optional** — any git repo under `~/Documents/GitHub/` is auto-discovered without one.
+
+A profile adds:
+- `claude.*` — bootstrap files, peer context, continue flag
+- `panes.*` — per-pane command overrides
 - `helpers.*` — commands for `fob test`, `fob audit`
 
+Auto-discovered repos that have a matching YAML profile (by `repo_root`) use the profile config. Others get sensible defaults.
+
 See [profiles.md](profiles.md) for format reference.
+
+## Repo Discovery
+
+`_discover_repos()` in `cli.py`:
+1. Scans `~/Documents/GitHub/` for directories containing `.git/`
+2. Builds a `name → {name, repo_root}` dict using lowercased directory names
+3. Overlays configured YAML profiles: any profile whose `repo_root` matches a discovered repo replaces the auto-generated entry
 
 ## Mission Files
 
@@ -65,8 +84,10 @@ Each repo maintains `.fob/` with four files:
 
 ## Bootstrap / Resume Behavior
 
-`bootstrap.py` reads the four `.fob/` files and builds a formatted mission brief, written to `.fob/.briefing`.
+`bootstrap.py` reads the `.fob/` files and builds a formatted mission brief written to `.fob/.briefing`.
 
 At launch, this file is refreshed before Zellij starts. The Claude pane runs `claude --continue`; the Claude Code runtime reads `CLAUDE.md` which directs Claude to read the mission files.
 
 `fob resume` prints this brief to stdout so the operator can inspect what Claude will see.
+
+If `claude.peers` is set in the profile, `active-mission.md` and `objectives.md` from each peer repo are appended as `PEER: <name>` sections, giving Claude cross-repo context.

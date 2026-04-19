@@ -38,6 +38,7 @@ Prefer wrapper commands over raw shell sequences:
 | `fob audit` | `ruff check` / `tsc --noEmit` / custom lint |
 | `fob status` | `git status` + session/branch info |
 | `fob resume` | reading `.fob/` files manually |
+| `fob cheat` | looking up keybindings |
 
 These are stable entrypoints. Claude should use them rather than constructing long shell pipelines.
 
@@ -50,7 +51,7 @@ Intended writable scope for Claude:
 
 Claude should not write outside `repo_root` without explicit operator confirmation.
 
-## What Is Not Automated Yet
+## What Is Not Automated
 
 By design, the following require explicit operator action:
 
