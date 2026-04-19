@@ -9,16 +9,6 @@ name: default                              # Profile identifier (matches filenam
 session_name: brief-default               # Zellij session name (must be unique)
 repo_root: /absolute/path/to/repo         # Target repository root
 
-layout: zellij/layouts/brief.kdl          # Zellij layout file (relative to FOB root)
-
-claude:
-  continue: true                           # Use claude --continue (vs fresh start)
-  bootstrap_files:
-    - .fob/standing-orders.md
-    - .fob/active-mission.md
-    - .fob/objectives.md
-    - .fob/mission-log.md
-
 panes:
   claude:
     cwd: /absolute/path/to/repo
@@ -58,14 +48,6 @@ helpers:
 name: controlplane
 session_name: brief-controlplane
 repo_root: /home/dev/Documents/GitHub/ControlPlane
-
-claude:
-  continue: true
-  bootstrap_files:
-    - .fob/standing-orders.md
-    - .fob/active-mission.md
-    - .fob/objectives.md
-    - .fob/mission-log.md
 
 panes:
   claude:

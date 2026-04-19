@@ -4,7 +4,7 @@
 
 ```
 fob (shell wrapper)
-└── src/cockpit/cli.py          ← main dispatcher
+└── src/fob/cli.py              ← main dispatcher
     ├── profile_loader.py       ← YAML profile loading + validation
     ├── launcher.py             ← Zellij session creation/attachment
     ├── session.py              ← Zellij session state queries
@@ -59,7 +59,7 @@ Each repo maintains `.fob/` with four files:
 | `objectives.md` | Ordered work list with in-progress / up-next / done sections |
 | `mission-log.md` | Scratch continuity — decisions, blockers, notes |
 
-`fob init` creates these from `templates/claude/` if missing.
+`fob init` creates these from `templates/mission/` if missing.
 
 `CLAUDE.md` in the repo root tells Claude to read these files at the start of each session.
 

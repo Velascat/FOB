@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dev — personal workflow CLI entrypoint."""
+"""fob — forward operating base CLI entrypoint."""
 from __future__ import annotations
 import sys
 from pathlib import Path
@@ -135,7 +135,7 @@ def main() -> None:
                 from fob.bootstrap import write_bootstrap_file
                 write_bootstrap_file(repo_root)
             ensure_claude_md(repo_root, FOB_DIR / "templates" / "mission")
-            print(c(f"\n  Cockpit: {profile['name']}", "B", "CYN"))
+            print(c(f"\n  Brief: {profile['name']}", "B", "CYN"))
             launch(profile, FOB_DIR)
 
         case "attach":

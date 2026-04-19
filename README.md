@@ -73,7 +73,7 @@ fob brief                                     # launch the workspace
 ```bash
 fob vf codex      # VideoFoundry: launch Codex workspace
 fob vf run        # VideoFoundry: run main pipeline
-fob dump [path]   # Dump repo to text chunks for context
+fob cheat         # Full command/keybinding reference (floating pane)
 fob rice          # Terminal ricing guide + tool installer
 ```
 

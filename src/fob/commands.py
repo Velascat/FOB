@@ -270,6 +270,6 @@ def cmd_install(args: list[str], fob_dir: Path) -> None:
         print(c("✓ Already in PATH", "GRN"))
         return
     with rc.open("a") as f:
-        f.write(f"\n# dev CLI\n{line}\n")
+        f.write(f"\n# fob\n{line}\n")
     print(c("✓ Added to PATH in ~/.bashrc", "GRN"))
     print(c(f"  Run: source ~/.bashrc", "DIM"))

@@ -1,15 +1,15 @@
-// cockpit.kdl — reference layout
+// brief.kdl — reference layout
 // The launcher generates a runtime version of this at launch time.
-// See: src/cockpit/launcher.py  generate_layout()
+// See: src/fob/launcher.py  generate_layout()
 //
-// Four-pane cockpit:
+// Four-pane layout:
 //   Left (60%)  : Claude pane
 //   Right (40%) : git / logs / shell stacked vertically
 
 layout {
     pane split_direction="vertical" {
         pane name="claude" size="60%" command="bash" {
-            args "-c" "echo 'cockpit — use dev cockpit to launch with a profile'"
+            args "-c" "echo 'run fob brief to launch with a profile'"
         }
         pane size="40%" split_direction="horizontal" {
             pane name="git" size="34%" command="bash" {

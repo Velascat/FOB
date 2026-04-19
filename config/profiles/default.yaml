@@ -1,15 +1,6 @@
 name: default
 session_name: brief-default
 repo_root: /home/dev/Documents/GitHub/VideoFoundry
-layout: zellij/layouts/brief.kdl
-
-claude:
-  continue: true
-  bootstrap_files:
-    - .fob/standing-orders.md
-    - .fob/active-mission.md
-    - .fob/objectives.md
-    - .fob/mission-log.md
 
 panes:
   claude:
@@ -28,4 +19,3 @@ panes:
 helpers:
   test: pytest -x -v
   audit: ./tools/open-workbench.sh audit
-  status: ./fob status
