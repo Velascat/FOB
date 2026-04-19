@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# dev — personal workflow CLI
+# Thin shell wrapper. Logic lives in src/cockpit/cli.py
+# Bootstrap the environment first with: ./run-main.sh
+set -euo pipefail
+
+UTILITY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_ENV="utility-cockpit"
+
+# Activate pyenv virtualenv when available
+if command -v pyenv &>/dev/null; then
+  eval "$(pyenv init --path)" 2>/dev/null || true
+  eval "$(pyenv init -)"      2>/dev/null || true
+  eval "$(pyenv virtualenv-init -)" 2>/dev/null || true
+  if pyenv virtualenvs 2>/dev/null | grep -q "$BUILD_ENV"; then
+    pyenv activate "$BUILD_ENV" 2>/dev/null || true
+  fi
+fi
+
+# Guard: verify Python deps are available
+if ! python3 -c "import yaml" 2>/dev/null; then
+  echo "⚠  Python dependencies missing. Run: ./run-main.sh" >&2
+  exit 1
+fi
+
+export PYTHONPATH="$UTILITY_DIR/src${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m cockpit.cli "$@"

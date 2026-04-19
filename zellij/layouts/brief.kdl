@@ -1,0 +1,26 @@
+// cockpit.kdl — reference layout
+// The launcher generates a runtime version of this at launch time.
+// See: src/cockpit/launcher.py  generate_layout()
+//
+// Four-pane cockpit:
+//   Left (60%)  : Claude pane
+//   Right (40%) : git / logs / shell stacked vertically
+
+layout {
+    pane split_direction="vertical" {
+        pane name="claude" size="60%" command="bash" {
+            args "-c" "echo 'cockpit — use dev cockpit to launch with a profile'"
+        }
+        pane size="40%" split_direction="horizontal" {
+            pane name="git" size="34%" command="bash" {
+                args "-c" "lazygit"
+            }
+            pane name="logs" size="33%" command="bash" {
+                args "-c" "echo 'logs pane'"
+            }
+            pane name="shell" command="bash" {
+                args "-c" "exec bash -l"
+            }
+        }
+    }
+}

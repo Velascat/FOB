@@ -1,0 +1,31 @@
+name: default
+session_name: brief-default
+repo_root: /home/dev/Documents/GitHub/VideoFoundry
+layout: zellij/layouts/brief.kdl
+
+claude:
+  continue: true
+  bootstrap_files:
+    - .fob/standing-orders.md
+    - .fob/active-mission.md
+    - .fob/objectives.md
+    - .fob/mission-log.md
+
+panes:
+  claude:
+    cwd: /home/dev/Documents/GitHub/VideoFoundry
+    command: claude --continue
+  git:
+    cwd: /home/dev/Documents/GitHub/VideoFoundry
+    command: lazygit
+  logs:
+    cwd: /home/dev/Documents/GitHub/VideoFoundry
+    command: tail -f .fob/runtime.log 2>/dev/null
+  shell:
+    cwd: /home/dev/Documents/GitHub/VideoFoundry
+    command: bash
+
+helpers:
+  test: pytest -x -v
+  audit: ./tools/open-workbench.sh audit
+  status: ./fob status
