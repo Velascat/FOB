@@ -163,8 +163,7 @@ def _discover_repos() -> dict[str, dict]:
         return found
     for d in sorted(github_dir.iterdir()):
         if d.is_dir() and (d / ".git").exists():
-            name = d.name.lower()
-            found[name] = {"name": name, "repo_root": str(d)}
+            found[d.name.lower()] = {"name": d.name, "repo_root": str(d)}
     # Overlay configured profiles (they override auto-discovered by repo_root match)
     for p in PROFILES_DIR.glob("*.yaml"):
         try:
@@ -217,8 +216,11 @@ def _pick_profiles() -> list[dict]:
     dot = "●" if session_running else "○"
     session_label = "  (session running)" if session_running else ""
 
+    # display_name → key reverse lookup for fzf parsing
+    display_to_key = {all_profiles[n]["name"]: n for n in names}
+
     if has_fzf:
-        fzf_lines = "\n".join(f"{dot} {n}" for n in names)
+        fzf_lines = "\n".join(f"{dot} {all_profiles[n]['name']}" for n in names)
         result = subprocess.run(
             ["fzf", "--prompt", "  brief > ", "--height", "~12",
              "--border", "--no-sort",
@@ -228,8 +230,8 @@ def _pick_profiles() -> list[dict]:
         )
         if result.returncode != 0 or not result.stdout.strip():
             sys.exit(0)
-        selected_names = [line.lstrip("●○ ").strip() for line in result.stdout.strip().splitlines()]
-        return [all_profiles[n] for n in selected_names if n in all_profiles]
+        selected_display = [line.lstrip("●○ ").strip() for line in result.stdout.strip().splitlines()]
+        return [all_profiles[display_to_key[d]] for d in selected_display if d in display_to_key]
 
     # Numbered menu fallback
     print()
@@ -241,7 +243,7 @@ def _pick_profiles() -> list[dict]:
     for i, name in enumerate(names, 1):
         configured = "claude_cfg" in all_profiles[name] or "panes" in all_profiles[name]
         tag = c("  configured", "DIM") if configured else ""
-        print(f"  {c(str(i), 'CYN')}  {sym}  {name}{tag}")
+        print(f"  {c(str(i), 'CYN')}  {sym}  {all_profiles[name]['name']}{tag}")
     print()
     print(c("  Enter numbers separated by spaces (e.g. 1 2)", "DIM"))
     try:
