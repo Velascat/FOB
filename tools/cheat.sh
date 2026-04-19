@@ -12,7 +12,7 @@ K()     { printf "  ${BYLW}${B}%-26s${R}  ${BGRN}%s${R}\n" "$1" "$2"; }
 CMD()   { printf "  ${BCYN}%-26s${R}  ${DIM}%s${R}\n" "$1" "$2"; }
 SUB()   { echo -e "\n  ${B}${WHT}$1${R}"; }
 
-clear
+_cheat_content() {
 echo -e "${BCYN}${B}"
 cat << 'BANNER'
   ███████╗ ██████╗ ██████╗     CHEATSHEET
@@ -119,8 +119,9 @@ CMD "fd -t d <name>"      "find directories only"
 echo
 
 hr
-echo -e "  ${DIM}Ctrl+p f to toggle floating  ·  Ctrl+p x to close${R}"
+echo -e "  ${DIM}Ctrl+p f to toggle floating  ·  Ctrl+p x to close  ·  q to quit${R}"
 hr
 echo
+}
 
-read -rsp "" 2>/dev/null || true
+_cheat_content | less -R

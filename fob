@@ -3,7 +3,7 @@
 # Thin shell wrapper. Logic lives in src/fob/cli.py
 set -euo pipefail
 
-FOB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+FOB_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 VENV="$FOB_DIR/.venv"
 
 # Auto-bootstrap Python environment on first run
