@@ -210,7 +210,9 @@ def launch(profiles: list[dict], fob_dir: Path, reset_layout: bool = False) -> N
             attach(FOB_SESSION)
     else:
         saved = Path(profiles[0]["repo_root"]) / ".fob" / "layout-state.kdl"
-        if not reset_layout and saved.exists() and "tab-bar" in saved.read_text():
+        if not reset_layout and saved.exists() and all(
+            kw in saved.read_text() for kw in ("tab-bar", "floating_panes")
+        ):
             layout_path = saved
             print(f"  → Restoring saved layout")
         else:
