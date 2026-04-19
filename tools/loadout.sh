@@ -151,7 +151,7 @@ install_all_missing() {
 
 # ── Shell config ──────────────────────────────────────────────────────────────
 BASHRC_BLOCK='
-# ── Rice ──────────────────────────────────────────────────────────────────────
+# ── Loadout ───────────────────────────────────────────────────────────────────
 # fzf — Ctrl+R history, Ctrl+T files, Alt+C dirs
 command -v fzf &>/dev/null && eval "$(fzf --bash)"
 
@@ -192,8 +192,8 @@ show_shell_config() {
   echo -e "${DIM}$BASHRC_BLOCK${R}"
   read -rp $'  write to ~/.bashrc? [y/N] ' yn
   if [[ "${yn,,}" == "y" ]]; then
-    if grep -qF '# ── Rice' "$HOME/.bashrc" 2>/dev/null; then
-      echo -e "${YLW}⚠  Rice block already in ~/.bashrc${R}"
+    if grep -qF '# ── Loadout' "$HOME/.bashrc" 2>/dev/null; then
+      echo -e "${YLW}⚠  Loadout block already in ~/.bashrc${R}"
     else
       printf '%s\n' "$BASHRC_BLOCK" >> "$HOME/.bashrc"
       echo -e "${GRN}✓ Written to ~/.bashrc${R}"
