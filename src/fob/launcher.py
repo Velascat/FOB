@@ -79,6 +79,19 @@ def generate_tab_layout(profile: dict, fob_dir: Path) -> Path:
     return tmp
 
 
+def _list_tabs(session_name: str) -> set[str]:
+    try:
+        r = subprocess.run(
+            ["zellij", "--session", session_name, "action", "query-tab-names"],
+            capture_output=True, text=True,
+        )
+        if r.returncode == 0:
+            return {line.strip() for line in r.stdout.splitlines() if line.strip()}
+    except Exception:
+        pass
+    return set()
+
+
 def attach(session_name: str = FOB_SESSION) -> None:
     os.execvp("zellij", ["zellij", "attach", session_name])
 
@@ -88,7 +101,11 @@ def launch(profiles: list[dict], fob_dir: Path, reset_layout: bool = False) -> N
         check_branch(Path(profile["repo_root"]))
 
     if session_exists(FOB_SESSION):
+        existing_tabs = _list_tabs(FOB_SESSION)
         for profile in profiles:
+            if profile["name"] in existing_tabs:
+                print(f"  → Tab '{profile['name']}' already open — skipping")
+                continue
             layout_path = generate_tab_layout(profile, fob_dir)
             subprocess.run([
                 "zellij", "--session", FOB_SESSION,
