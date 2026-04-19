@@ -37,7 +37,7 @@ def show_help(_: list[str]) -> None:
 
     sections = [
         ("BRIEF", [
-            ("brief [profile]", "Launch Zellij workspace           (default: default)"),
+            ("brief [profile]", "Pick or launch a workspace profile"),
             ("brief --reset-layout", "Regenerate layout from profile, discarding saved state"),
             ("attach  [profile]", "Attach to existing Zellij session"),
             ("init    [repo]",    "Initialize .fob/ state files in repo"),
@@ -81,6 +81,73 @@ def _load_default_profile() -> dict | None:
         return None
 
 
+def _pick_profile() -> str:
+    import subprocess
+    import yaml
+    from fob.session import list_sessions
+
+    profiles = sorted(p.stem for p in PROFILES_DIR.glob("*.yaml"))
+    if not profiles:
+        print(c("✗ No profiles found in config/profiles/", "RED"))
+        sys.exit(1)
+    if len(profiles) == 1:
+        return profiles[0]
+
+    running_sessions = set(list_sessions())
+
+    entries = []
+    for name in profiles:
+        try:
+            data = yaml.safe_load((PROFILES_DIR / f"{name}.yaml").read_text())
+            is_running = data.get("session_name", "") in running_sessions
+        except Exception:
+            is_running = False
+        entries.append((name, is_running))
+
+    # fzf picker
+    try:
+        result = subprocess.run(["fzf", "--version"], capture_output=True)
+        has_fzf = result.returncode == 0
+    except FileNotFoundError:
+        has_fzf = False
+
+    if has_fzf:
+        fzf_lines = "\n".join(
+            f"{'● ' if r else '○ '}{n}{'  (running)' if r else ''}"
+            for n, r in entries
+        )
+        result = subprocess.run(
+            ["fzf", "--prompt", "  brief > ", "--height", "~10",
+             "--border", "--ansi", "--no-sort"],
+            input=fzf_lines, text=True, capture_output=True,
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            sys.exit(0)
+        return result.stdout.strip().lstrip("●○ ").split("  ")[0].strip()
+
+    # Numbered menu fallback
+    print()
+    print(c("  SELECT PROFILE", "B", "CYN"))
+    print(c("─" * 40, "DIM"))
+    for i, (name, is_running) in enumerate(entries, 1):
+        dot = c("●", "GRN") if is_running else c("○", "DIM")
+        suffix = c("  running", "GRN") if is_running else ""
+        print(f"  {c(str(i), 'CYN')}  {dot}  {name}{suffix}")
+    print()
+    try:
+        choice = input(c("  profile: ", "B")).strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        sys.exit(0)
+
+    if choice.isdigit() and 1 <= int(choice) <= len(entries):
+        return entries[int(choice) - 1][0]
+    if choice in profiles:
+        return choice
+    print(c("✗ Invalid selection", "RED"))
+    sys.exit(1)
+
+
 def _require_zellij() -> None:
     import subprocess
     try:
@@ -111,8 +178,9 @@ def main() -> None:
 
         case "brief":
             _require_zellij()
-            profile_name = args[0] if args else "default"
             reset_layout = "--reset-layout" in args
+            named = [a for a in args if not a.startswith("--")]
+            profile_name = named[0] if named else _pick_profile()
             from fob.profile_loader import load_profile, validate_profile
             from fob.launcher import launch
             from fob.bootstrap import (
