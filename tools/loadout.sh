@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# rice.sh — terminal ricing guide & tool installer
+# loadout.sh — dev toolchain installer and shell configuration
 
 R='\033[0m'; B='\033[1m'; DIM='\033[2m'
 RED='\033[31m'; GRN='\033[32m'; YLW='\033[33m'; CYN='\033[36m'; MAG='\033[35m'

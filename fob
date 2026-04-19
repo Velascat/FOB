@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
 # fob — forward operating base CLI
 # Thin shell wrapper. Logic lives in src/fob/cli.py
-# First-time setup: ./bootstrap.sh
 set -euo pipefail
 
 FOB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV="$FOB_DIR/.venv"
 
-# Use local venv if available, otherwise fall back to system python
-if [[ -f "$VENV/bin/python3" ]]; then
-  PYTHON="$VENV/bin/python3"
-else
-  PYTHON="python3"
-  if ! python3 -c "import yaml" 2>/dev/null; then
-    echo "⚠  Python dependencies missing. Run: ./bootstrap.sh" >&2
-    exit 1
-  fi
+# Auto-bootstrap Python environment on first run
+if [[ ! -f "$VENV/bin/python3" ]]; then
+  echo "▶ FOB: first run — setting up Python environment..."
+  bash "$FOB_DIR/bootstrap.sh" || { echo "✗ Bootstrap failed." >&2; exit 1; }
+  echo
 fi
 
 export PYTHONPATH="$FOB_DIR/src${PYTHONPATH:+:$PYTHONPATH}"
-exec "$PYTHON" -m fob.cli "$@"
+exec "$VENV/bin/python3" -m fob.cli "$@"

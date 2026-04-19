@@ -57,7 +57,7 @@ def show_menu(_: list[str]) -> None:
         ("status",  "repo, branch, session state"),
         ("resume",  "print mission brief"),
         ("doctor",  "full dependency check + install"),
-        ("rice",    "terminal tools installer"),
+        ("loadout", "install and configure dev tools"),
         ("cheat",   "keybinding reference"),
         ("help",    "full command reference"),
     ]
@@ -130,7 +130,7 @@ def show_help(_: list[str]) -> None:
         ]),
         ("TOOLS", [
             ("cheat",             "Open full cheatsheet in floating pane"),
-            ("rice",              "Terminal ricing guide & tool installer"),
+            ("loadout",           "Install and configure dev tools"),
             ("install",           "Symlink fob to ~/.local/bin"),
         ]),
     ]
@@ -281,13 +281,15 @@ def _require_zellij() -> None:
 
 def main() -> None:
     argv = sys.argv[1:]
-    cmd = argv[0] if argv else "menu"
+    cmd = argv[0] if argv else "brief"
     args = argv[1:]
 
     if cmd in ("-h", "--help"):
         cmd = "help"
     if cmd == "--menu":
         cmd = "menu"
+    if cmd == "--brief":
+        cmd = "brief"
 
     from fob import commands
 
@@ -393,8 +395,11 @@ def main() -> None:
         case "cheat":
             commands.cmd_cheat(args, SCRIPTS_DIR)
 
-        case "rice":
-            commands.cmd_rice(args, SCRIPTS_DIR)
+        case "loadout":
+            commands.cmd_loadout(args, SCRIPTS_DIR)
+
+        case "rice":  # backwards-compat alias
+            commands.cmd_loadout(args, SCRIPTS_DIR)
 
         case "install":
             commands.cmd_install(args, FOB_DIR)

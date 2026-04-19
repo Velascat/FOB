@@ -26,15 +26,15 @@ echo
 hr
 echo -e "  ${B}TOOL STATUS${R}"
 hr
-chk lazygit  && ok lazygit  "git TUI"            || miss lazygit  "run: fob rice"
-chk fzf      && ok fzf      "fuzzy finder"       || miss fzf      "run: fob rice"
+chk lazygit  && ok lazygit  "git TUI"            || miss lazygit  "run: fob loadout"
+chk fzf      && ok fzf      "fuzzy finder"       || miss fzf      "run: fob loadout"
 (chk bat || command -v batcat &>/dev/null) \
-             && ok bat      "syntax cat"         || miss bat      "run: fob rice"
-chk eza      && ok eza      "modern ls"          || miss eza      "run: fob rice"
-chk rg       && ok rg       "fast grep"          || miss rg       "run: fob rice"
-chk zoxide   && ok zoxide   "smart cd"           || miss zoxide   "run: fob rice"
-chk delta    && ok delta    "git diffs"          || miss delta    "run: fob rice"
-chk starship && ok starship "shell prompt"       || miss starship "run: fob rice"
+             && ok bat      "syntax cat"         || miss bat      "run: fob loadout"
+chk eza      && ok eza      "modern ls"          || miss eza      "run: fob loadout"
+chk rg       && ok rg       "fast grep"          || miss rg       "run: fob loadout"
+chk zoxide   && ok zoxide   "smart cd"           || miss zoxide   "run: fob loadout"
+chk delta    && ok delta    "git diffs"          || miss delta    "run: fob loadout"
+chk starship && ok starship "shell prompt"       || miss starship "run: fob loadout"
 echo
 
 hr
@@ -43,7 +43,7 @@ hr
 printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "fob status"    "situation report"
 printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "fob resume"    "claude mission brief"
 printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "fob test"      "run project tests"
-printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "fob rice"      "install / update dev tools"
+printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "fob loadout"      "install / update dev tools"
 printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "fob cheat"     "open full cheatsheet"
 echo
 

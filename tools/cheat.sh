@@ -35,7 +35,7 @@ CMD "fob init [repo]"       "initialize .fob/ mission files"
 CMD "fob test"              "run project tests"
 CMD "fob audit"             "run project audit"
 CMD "fob doctor"            "check all dependencies"
-CMD "fob rice"              "install / update dev tools"
+CMD "fob loadout"           "install and configure dev tools"
 CMD "fob cheat"             "this screen"
 echo
 

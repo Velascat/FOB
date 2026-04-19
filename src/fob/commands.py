@@ -196,7 +196,7 @@ DEPS = [
     ("fzf",     ["fzf"],              "Fuzzy finder"),
 ]
 
-# Mirror of rice.sh TOOLS — name, binary alternatives, description
+# Mirror of loadout.sh TOOLS — name, binary alternatives, description
 RICE_TOOLS = [
     ("fzf",       ["fzf"],              "Fuzzy finder — Ctrl+R, file & dir search"),
     ("bat",       ["bat", "batcat"],    "Syntax-highlighted cat"),
@@ -228,23 +228,23 @@ def cmd_doctor(args: list[str], scripts_dir: Path | None = None) -> None:
 
     print(c("  TERMINAL TOOLS", "B", "CYN"))
     print(hr())
-    missing_rice = []
+    missing_tools = []
     for name, binaries, desc in RICE_TOOLS:
         found = _which_any(binaries)
         if found:
             print(f"  {c('✓', 'GRN')} {c(name, 'B'):<20}  {c(found, 'DIM')}")
         else:
-            missing_rice.append(name)
+            missing_tools.append(name)
             print(f"  {c('✗', 'DIM')} {c(name, 'DIM'):<20}  {c(desc, 'DIM')}")
     print()
 
-    if not missing_core and not missing_rice:
+    if not missing_core and not missing_tools:
         print(c("  All tools found.", "GRN"))
         print()
         return
 
     manual_missing = [n for n in missing_core if n in ("zellij", "claude")]
-    rice_installable = [n for n in missing_core if n not in ("zellij", "claude")] + missing_rice
+    installable = [n for n in missing_core if n not in ("zellij", "claude")] + missing_tools
 
     if missing_core:
         if manual_missing:
@@ -253,18 +253,18 @@ def cmd_doctor(args: list[str], scripts_dir: Path | None = None) -> None:
                 print(c(f"  {name}: manual install required — {desc}", "YLW"))
             print()
 
-    if rice_installable and scripts_dir:
-        print(c(f"  {len(rice_installable)} tool(s) missing — fob rice can install them", "YLW"))
+    if installable and scripts_dir:
+        print(c(f"  {len(installable)} tool(s) missing — fob loadout can install them", "YLW"))
         try:
             answer = input(c("  Install now? [y/N] ", "B"))
         except (EOFError, KeyboardInterrupt):
             answer = ""
         if answer.strip().lower() == "y":
-            os.execvp("bash", ["bash", str(scripts_dir / "rice.sh"), "install"])
+            os.execvp("bash", ["bash", str(scripts_dir / "loadout.sh"), "install"])
         else:
-            print(c("  Run: fob rice  to install when ready", "DIM"))
-    elif rice_installable:
-        print(c("  Run: fob rice  to install missing tools", "YLW"))
+            print(c("  Run: fob loadout  to install when ready", "DIM"))
+    elif installable:
+        print(c("  Run: fob loadout  to install missing tools", "YLW"))
     print()
 
 
@@ -321,8 +321,8 @@ def cmd_cheat(args: list[str], scripts_dir: Path) -> None:
         os.execvp("bash", ["bash", str(script)])
 
 
-def cmd_rice(args: list[str], scripts_dir: Path) -> None:
-    script = scripts_dir / "rice.sh"
+def cmd_loadout(args: list[str], scripts_dir: Path) -> None:
+    script = scripts_dir / "loadout.sh"
     os.execvp("bash", ["bash", str(script)] + args)
 
 

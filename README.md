@@ -1,26 +1,27 @@
 # FOB — Forward Operating Base
 
-A local operator console for Claude-driven development. One command opens a structured Zellij workspace — Claude in the main pane, git and shell alongside it, mission context loaded from disk.
+A local operator console for Claude-driven development. Run `fob` from any repo — it detects where you are, bootstraps itself if needed, and opens a structured Zellij workspace.
 
 ## What You Get
 
-- **`fob brief`** — interactive repo picker; opens (or resumes) a named Zellij session with per-project tabs
+- **`fob`** — smart entrypoint: detects your repo, auto-launches the right workspace
 - **Structured workspace** — Claude in 60%, lazygit + logs + shell in the right column
 - **`.fob/` mission files** — four local markdown files that give Claude explicit, persistent context across sessions
 - **Auto-discovery** — every git repo under `~/Documents/GitHub/` appears in the picker automatically; no YAML required
 - **Session persistence** — Zellij serialization survives terminal close and reboots
 
-## What Happens When You Run `fob brief`
+## What Happens When You Run `fob`
 
-1. An interactive picker shows all repos under `~/Documents/GitHub/` (Tab to select multiple)
-2. If you're already inside the `fob` Zellij session, your selection opens as new named tabs
-3. Otherwise, a new session launches with a tab per selected repo
-4. In each tab: Claude starts with `claude --continue` and reads `.fob/` mission files for context
-5. lazygit, a log tail, and a shell live in the right column
+1. If your Python environment isn't ready, it bootstraps itself first (first run only)
+2. If you're inside a git repo, that repo is selected automatically — no picker needed
+3. If you're not in a repo, an interactive picker shows all repos under `~/Documents/GitHub/`
+4. A named Zellij session opens with a tab per selected repo
+5. In each tab: Claude starts with `claude --continue` and reads `.fob/` mission files for context
+6. lazygit, a log tail, and a shell live in the right column
 
 ```
 ┌─────────────────────────────────────────────┐
-│  fob  │  videofoundry  │  controlplane  │   │  ← tab bar
+│  FOB  │  VideoFoundry  │  ControlPlane  │   │  ← tab bar
 ├─────────────────────┬──────────────────┤
 │                     │    lazygit       │
 │   claude --cont.    ├──────────────────┤
@@ -28,7 +29,7 @@ A local operator console for Claude-driven development. One command opens a stru
 │                     ├──────────────────┤
 │                     │    shell         │
 └─────────────────────┴──────────────────┘
-│  NORMAL  │  fob  │  ...                │   │  ← status bar
+│  NORMAL  │  fob  │  ...               │    │  ← status bar
 ```
 
 ## Why It Exists
@@ -39,8 +40,7 @@ A local operator console for Claude-driven development. One command opens a stru
 
 ```bash
 cd ~/Documents/GitHub/FOB
-./bootstrap.sh        # creates .venv, installs PyYAML
-./fob install         # symlinks fob to ~/.local/bin
+./fob install         # symlinks fob to ~/.local/bin (bootstraps Python env automatically)
 source ~/.bashrc
 fob doctor            # verify dependencies
 ```
@@ -50,10 +50,11 @@ Dependencies: `zellij`, `claude` (Claude Code CLI), `lazygit`, `git`, `python3`,
 ## First Run
 
 ```bash
-fob brief             # pick a repo; .fob/ is auto-initialized if missing
+cd ~/Documents/GitHub/YourRepo
+fob
 ```
 
-That's it. No profile YAML needed to get started.
+That's it. The Python environment bootstraps itself on the first invocation. `.fob/` is auto-initialized in the repo if missing.
 
 ## `.fob/` Mission Files
 
@@ -76,7 +77,8 @@ Claude reads all four at the start of each session. After progress, Claude updat
 
 | Command | Description |
 |---------|-------------|
-| `fob brief [repo]` | Pick repos and launch workspace (or add tabs to running session) |
+| `fob` | Smart launch — detects repo from cwd, opens workspace |
+| `fob brief [repo]` | Explicit launch with picker or named repo |
 | `fob brief --reset-layout` | Regenerate layout from defaults, discarding saved state |
 | `fob attach` | Re-attach to the running `fob` session |
 | `fob exit` | Kill the `fob` session and all panes |
@@ -91,8 +93,8 @@ Claude reads all four at the start of each session. After progress, Claude updat
 
 | Command | Description |
 |---------|-------------|
+| `fob loadout` | Install and configure dev tools |
 | `fob cheat` | Open keybinding reference (floating pane inside Zellij) |
-| `fob rice` | Terminal ricing guide + tool installer |
 | `fob install` | Symlink `fob` to `~/.local/bin` |
 
 ## Profiles (Optional)
@@ -104,13 +106,10 @@ See [docs/profiles.md](docs/profiles.md).
 ## Typical Session
 
 ```
-$ fob brief
-  ○ fob          ○ videofoundry    ○ controlplane
-> [fob selected automatically — cwd match]
-
-  Brief: fob
+$ cd ~/Documents/GitHub/VideoFoundry
+$ fob
+  Brief: VideoFoundry
   → Creating session 'fob'
-  → Layout: /tmp/fob-session.kdl
 
 [Zellij opens — Claude pane starts, reads .fob/, continues from last session]
 ```
