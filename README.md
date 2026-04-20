@@ -1,6 +1,6 @@
 # FOB — Forward Operating Base
 
-A persistent, repo-scoped operator workspace for Claude-driven development. Run `fob` from any repo — it attaches to your existing session or creates a new one, and Claude picks up exactly where you left off.
+A persistent, repo-scoped operator workspace for Claude-driven development. Run `fob` from any repo — it attaches to your existing session or creates a new one, and Claude resumes exactly where you left off.
 
 ## What FOB Is
 
@@ -8,8 +8,9 @@ FOB maintains a persistent workspace that you can leave and return to without lo
 
 - **Session persistence** — a single named Zellij session (`fob`) stays alive across terminal closes and reconnects; `fob brief` attaches to it or creates it
 - **Context persistence** — `.fob/` mission files give Claude structured, explicit context that survives across sessions
-- **Layout persistence** — save and restore workspace layouts on demand via `fob layout save/load`
+- **Layout persistence** — `fob save` captures the live Zellij tab layout per profile; `fob layout save/load` for explicit KDL-based restore
 - **Auto-discovery** — every git repo under `~/Documents/GitHub/` appears in the picker automatically; no YAML required
+- **Group profiles** — define named groups (e.g. `platform`) to open multiple repos as a single tab with one command
 
 FOB is not a neutral bootstrap script or a multiplexer-agnostic tool. Zellij is a core dependency, and persistence is the point.
 
@@ -21,30 +22,31 @@ FOB is not a neutral bootstrap script or a multiplexer-agnostic tool. Zellij is 
 │  FOB  │  YourRepo  │  ...                         │  ← tab bar
 ├──────────┬──────────────────────────────┬──────────────┤
 │          │                              │              │
-│ lazygit  │      claude --continue       │     logs     │
+│ lazygit  │      claude --resume         │     logs     │
 │  (28%)   │           (44%)              │    (28%)     │
-│          ├──────────────────────────────┤              │
-│          │  shell  (15%)                │              │
+├──────────┤──────────────────────────────┤              │
+│ status   │  shell  (15%)                │              │
+│  (25%)   │                              │              │
 └──────────┴──────────────────────────────┴──────────────┘
 │  NORMAL  │  fob  │  ...                               │  ← status bar
 ```
 
-Left 28%: lazygit (top) + col-status script (bottom, fixed). Center 44%: Claude + shell (15%). Right 28%: logs.
+Left 28%: lazygit (top) + ControlPlane status script (bottom 25%). Center 44%: Claude + shell (15%). Right 28%: logs.
 
-**Multi repo (`fob multi`) — single tab:**
+**Multi repo (`fob multi` or group profile) — single tab:**
 ```
 ┌──────────────────────────────────────────────────────┐
-│  FOB+YourRepo  │  ...                           │  ← tab bar
-├──────────┬───────────────────────��──┬───────────────┤
-│ lazygit  │                          │ lazygit       │
-│ repo-A   │    claude --continue     │ repo-B        │
-│ logs-A ▸ │       (GitHub/)          │ logs-B ▸      │
-│          ├──────────────────────────┤               │
-│          │  shell  (15%)            │               │
-└──────────┴──────────────────────────┴───────────────┘
+│  platform  │  ...                                │  ← tab bar
+├──────────┬─────────────────────────┬──────────────────┤
+│ lazygit  │                         │  shell-A ▸       │
+│  repo-A  │                         │  shell-B ▸  (75%)│
+│ lazygit  │    claude --resume      ├──────────────────┤
+│  repo-B  │    (GitHub/)            │  cp-status  (25%)│
+│   ...  ▸ │                         │                  │
+└──────────┴─────────────────────────┴──────────────────┘
 ```
 
-Each side column (28%): stacked lazygits + stacked shells (one per repo), fixed col-status pane at bottom. Center 44%: Claude + shell. Repos split evenly left/right. Claude starts at `~/Documents/GitHub/`.
+Left 28%: stacked lazygits (all repos). Center: Claude only, starts at `~/Documents/GitHub/`. Right 28%: stacked shells (75%) + ControlPlane status (25%).
 
 ## What Happens When You Run `fob`
 
@@ -54,13 +56,13 @@ Each side column (28%): stacked lazygits + stacked shells (one per repo), fixed 
 4. If outside all known repos (e.g. at `~/Documents/GitHub/`) → single-select picker
 5. Session `fob` exists → adds repo as a new named tab
 6. Session `fob` doesn't exist → generates layout, launches Zellij session
-7. Claude starts with `claude --continue`; reads `.fob/.briefing` for structured context
+7. Claude starts with `claude --resume <session-id>` (first run: fresh; subsequent runs: resumes saved session)
 
 Use `fob multi` to explicitly open multiple repos at once.
 
 ## Why It Exists
 
-`claude --continue` resumes the last conversation but gives Claude no structured context. `.fob/` provides that — standing orders, active mission, objectives, and a mission log. Claude reads these at startup and picks up exactly where things left off.
+`claude --continue` resumes the most recent conversation globally — wrong when you have multiple groups running. FOB tracks a session ID per profile/group in `config/profiles/<name>.session` (gitignored) and uses `claude --resume <id>` so each workspace always resumes its own conversation. `.fob/` mission files give Claude structured context: standing orders, active mission, objectives, and a mission log.
 
 ## Installation
 
@@ -82,15 +84,36 @@ fob
 
 `.fob/` is auto-initialized in the repo on first launch.
 
+## Group Profiles
+
+Create a group profile to open multiple repos as a single tab in one step:
+
+```yaml
+# config/profiles/platform.yaml
+name: platform
+group:
+  - controlplane
+  - fob
+  - switchboard
+  - workstation
+```
+
+```bash
+fob brief platform    # opens all four repos in one multi-pane tab
+```
+
+Groups appear in the picker with a `▸` prefix and their member list. Selecting a group expands it into its constituent profiles automatically.
+
 ## State Boundaries
 
-FOB state lives in three distinct layers:
+FOB state lives in four distinct layers:
 
 | Layer | What persists | Location |
 |-------|--------------|----------|
 | Zellij | Session, tabs, pane arrangement | Zellij session manager |
-| `.fob/` | Mission files, layout, compiled briefing | `<repo>/.fob/` |
-| CLI | Orchestration, repo discovery, profile config | `config/profiles/*.yaml` |
+| `.fob/` | Mission files, layout, compiled briefing | `<repo>/.fob/` (gitignored) |
+| CLI config | Profile YAML (tracked for platform group) | `config/profiles/*.yaml` |
+| Private config | Saved layouts, session IDs | `config/profiles/*.kdl`, `*.session` (gitignored) |
 | Global | Last session group (for `fob restore`) | `~/.local/share/fob/last-session.json` |
 
 ## `.fob/` Continuity Model
@@ -118,7 +141,7 @@ FOB state lives in three distinct layers:
 
 | Command | Description |
 |---------|-------------|
-| `fob` / `fob brief [repo]` | Auto-select current repo and launch |
+| `fob` / `fob brief [profile]` | Auto-select current repo and launch |
 | `fob brief --layout` | Launch using saved layout (explicit restore) |
 | `fob multi` | Multi-select picker — open several repos as tabs |
 | `fob restore` | Re-open last saved session group (`--show` to preview without launching) |
@@ -154,16 +177,16 @@ FOB is a persistent system. Every persistent system needs a clear escape hatch.
 
 **Layout:**
 
-Layout persistence is explicit and opt-in. Normal `fob brief` always generates a fresh layout.
-
 | Command | Description |
 |---------|-------------|
-| `fob layout save` | Save current repo layout to `.fob/layout.json` |
+| `fob save [profile]` | Capture live Zellij tab layout → saved to `config/profiles/<name>.kdl` (gitignored) |
+| `fob save --reset [profile]` | Delete saved layout, revert to YAML-generated |
+| `fob layout save` | Save generated layout to `.fob/layout.json` (explicit KDL-based restore) |
 | `fob layout load` | Restore saved layout (starts Zellij session) |
 | `fob layout show` | Show saved layout metadata and path |
 | `fob layout reset` | Delete saved layout for current repo |
 
-Layout state lives in `.fob/layout.json` (metadata) and `.fob/layout.kdl` (Zellij KDL). Both are human-readable.
+`fob save` captures the live pane arrangement from the running session. `fob layout save` saves the YAML-generated layout for session-level restore via `--new-session-with-layout`.
 
 **Utility:**
 
@@ -184,9 +207,9 @@ $ fob
   Brief: YourRepo
   session  creating   (fob)
   layout   fresh
-  mission  implement multi-source audio mixing…
+  mission  implement feature X…
 
-[Zellij opens — Claude pane starts, reads .fob/.briefing, continues]
+[Zellij opens — Claude pane starts, reads .fob/.briefing, begins fresh session]
 ```
 
 Returning to an existing session:
@@ -196,16 +219,16 @@ $ fob
 
   Brief: YourRepo
   session  attaching  (fob)
-  mission  implement multi-source audio mixing…
+  mission  implement feature X…
 
-[Zellij attaches — workspace resumes exactly as left]
+[Zellij attaches — Claude resumes saved session ID for this profile]
 ```
-
-If the repo tab is already open, `fob` shows the picker to open a different repo instead of duplicating the tab.
 
 ## Inter-Repo Work
 
 FOB handles multiple repos in two complementary ways:
+
+**Group profiles** — define a named group in `config/profiles/<name>.yaml` with a `group:` list. `fob brief platform` opens all members as a single multi-pane tab. Groups appear in the picker with `▸` prefix.
 
 **Multi-tab** — run `fob multi` from anywhere to get the multi-select picker. Tab to select multiple repos; each opens as a named tab in the same `fob` session. In multi-repo mode, Claude's working directory starts at `~/Documents/GitHub/` so it can navigate across repos freely.
 
@@ -231,12 +254,16 @@ fob restore --show      # preview what would be restored without launching
 ```bash
 fob status --all        # one-line summary of every repo: tab, layout, branch, mission
 fob map --all           # detailed snapshot of every repo
-fob map --all --json    # machine-readable — useful for Control Plane delegation
+fob map --all --json    # machine-readable — useful for ControlPlane delegation
 ```
 
 ## Profiles (Optional)
 
-Repos are auto-discovered — no YAML needed for basic use. Create `config/profiles/<name>.yaml` to configure custom Claude context files, peer repo awareness, or non-default helper commands.
+Repos are auto-discovered — no YAML needed for basic use. Create `config/profiles/<name>.yaml` to configure custom Claude context files, peer repo awareness, custom pane commands, or group multiple repos under one name.
+
+Profile visibility:
+- **Platform group members** (`controlplane`, `fob`, `switchboard`, `workstation`, `platform`) are tracked in git
+- **All other profiles** are gitignored by default — private repos never appear in tracked files
 
 See [docs/profiles.md](docs/profiles.md).
 

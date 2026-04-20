@@ -1,8 +1,26 @@
 # Profiles
 
-Profiles are **optional**. Any git repo under `~/Documents/GitHub/` is auto-discovered and appears when you run `fob` without a profile. Create a profile when you need custom Claude context, peer cross-repo awareness, or non-default helper commands.
+Profiles are **optional**. Any git repo under `~/Documents/GitHub/` is auto-discovered and appears when you run `fob` without a profile. Create a profile when you need custom Claude context, peer cross-repo awareness, custom pane commands, or to define a named group of repos.
 
 Profiles live in `config/profiles/<name>.yaml`.
+
+## Git Visibility
+
+Only platform-group member profiles are tracked in git. All other profiles are gitignored by default — private repos never appear in committed files:
+
+```
+config/profiles/*.yaml        # gitignored
+!config/profiles/platform.yaml      # tracked
+!config/profiles/controlplane.yaml  # tracked
+!config/profiles/fob.yaml           # tracked
+!config/profiles/switchboard.yaml   # tracked
+!config/profiles/workstation.yaml   # tracked
+
+config/profiles/*.kdl         # always gitignored (saved live layouts)
+config/profiles/*.session     # always gitignored (Claude session IDs)
+```
+
+To add a private repo profile: create `config/profiles/<name>.yaml` — it will be silently ignored by git.
 
 ## Format
 
@@ -10,20 +28,21 @@ Profiles live in `config/profiles/<name>.yaml`.
 name: myrepo                              # Profile identifier (matches filename stem)
 repo_root: /absolute/path/to/repo         # Target repository root
 
+status_repos: MyRepo                      # ControlPlane status filter (empty = show all)
+
 claude:
-  continue: true                           # Use claude --continue (vs fresh start)
-  bootstrap_files:                         # Files fed to Claude at launch (in order)
-    - .fob/standing-orders.md              # Omit to use these four defaults
+  bootstrap_files:                        # Files fed to Claude at launch (in order)
+    - .fob/standing-orders.md             # Omit to use these four defaults
     - .fob/active-mission.md
     - .fob/objectives.md
     - .fob/mission-log.md
-    # - .fob/extra-context.md             # Add project-specific files here
-  peers: []                               # Other profile names to pull context from
-    # - controlplane                      # Includes that repo's active-mission + objectives
+    # - .fob/extra-context.md            # Add project-specific files here
+  peers: []                              # Other profile names to pull context from
+    # - controlplane                     # Includes that repo's active-mission + objectives
 
 panes:
   git:
-    command: lazygit                       # Override default git pane command
+    command: lazygit                      # Override default git pane command
   logs:
     command: tail -f logs/dev.log 2>/dev/null
 
@@ -31,6 +50,21 @@ helpers:
   test: pytest -x -v
   audit: ruff check src/
 ```
+
+## Group Profiles
+
+A profile with a `group:` list (and no `repo_root:`) defines a named group. Selecting it expands all members automatically:
+
+```yaml
+name: platform
+group:
+  - controlplane
+  - fob
+  - switchboard
+  - workstation
+```
+
+Groups appear in the picker with `▸` prefix and their member list. `fob brief platform` opens all four repos as a single multi-pane tab.
 
 ## Adding a Profile
 
@@ -44,6 +78,26 @@ helpers:
 - `repo_root` must be an absolute path to an existing directory
 - Tilde (`~`) is expanded automatically
 - All fields except `name` and `repo_root` are optional
+
+## status_repos
+
+Controls which repos appear in the ControlPlane status pane. Set to the repo's board key to filter, or omit/empty to show all managed repos:
+
+```yaml
+status_repos: ControlPlane    # show only ControlPlane on the board
+status_repos: ""              # show all CP-tracked repos (useful for FOB itself)
+```
+
+## Claude Session IDs
+
+FOB tracks a Claude session ID per profile in `config/profiles/<name>.session` (gitignored). On launch, if a session ID is saved, Claude starts with `claude --resume <id>` instead of a fresh conversation. If the saved session no longer exists, it falls back to a fresh start automatically.
+
+The session ID is captured when Claude exits — no manual step needed. Each profile and group maintains its own session independently.
+
+To discard a saved session and start fresh next brief:
+```bash
+rm config/profiles/<name>.session
+```
 
 ## Claude Context: bootstrap_files
 
@@ -77,11 +131,22 @@ claude:
 
 ## Layout Persistence
 
-Layout persistence is an explicit, opt-in feature. Normal `fob brief` always generates a fresh layout — it does not silently restore a previous one.
+### Live Layout Capture (fob save)
 
-To save and restore a layout:
+`fob save [profile]` captures the current Zellij tab layout — pane sizes, commands, everything — and saves it to `config/profiles/<name>.kdl` (gitignored). The next `fob brief` uses it automatically instead of regenerating from YAML.
+
 ```bash
-fob layout save         # save current repo layout to .fob/layout.json + .fob/layout.kdl
+fob save                      # save current tab for the auto-detected profile
+fob save myrepo               # save the tab named "myrepo"
+fob save --reset myrepo       # delete saved layout, revert to YAML-generated
+```
+
+### KDL-Based Restore (fob layout)
+
+`fob layout save` saves the YAML-generated layout for explicit session-level restore:
+
+```bash
+fob layout save         # save generated layout to .fob/layout.json + .fob/layout.kdl
 fob layout load         # restore saved layout (starts Zellij session)
 fob brief --layout      # full brief flow + restore saved layout
 fob layout show         # inspect what is saved (backend, profile, saved_at, path)
@@ -90,16 +155,16 @@ fob clear               # same as layout reset
 fob clear --all         # delete saved layouts across all repos
 ```
 
-Saved layout metadata (`.fob/layout.json`) includes the backend, repo root, profile name, and timestamp. If the repo root in the saved file does not match the current path, `fob layout load` will refuse to apply it and explain the mismatch.
+Saved layout metadata (`.fob/layout.json`) includes the backend, repo root, profile name, and timestamp. If the repo root in the saved file does not match the current path, `fob layout load` will refuse and explain the mismatch.
 
 ## Example: Configured Profile
 
 ```yaml
 name: controlplane
 repo_root: /home/dev/Documents/GitHub/ControlPlane
+status_repos: ControlPlane
 
 claude:
-  continue: true
   bootstrap_files:
     - .fob/standing-orders.md
     - .fob/active-mission.md
