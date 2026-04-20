@@ -268,6 +268,16 @@ def _delete_dead_session(session_name: str) -> None:
         pass
 
 
+def _clear_resurrection_cache(session_name: str) -> None:
+    """Delete Zellij's stale resurrection KDL for this session to prevent parse errors."""
+    try:
+        cache_dir = Path.home() / ".cache" / "zellij"
+        for stale in cache_dir.glob(f"*/session_info/{session_name}/session-layout.kdl"):
+            stale.unlink()
+    except Exception:
+        pass
+
+
 def _list_tabs(session_name: str) -> set[str]:
     try:
         r = subprocess.run(
@@ -310,9 +320,10 @@ def launch(
                 "action", "new-tab",
                 "--name", tab_name,
                 "--layout", str(layout_path),
-            ])
+            ], capture_output=True)
             print(f"  {_c('tab', 'DIM')}  {_c(tab_name, 'GRN')}  {_c('added', 'GRN')}")
         if not os.environ.get("ZELLIJ"):
+            _clear_resurrection_cache(FOB_SESSION)
             attach(FOB_SESSION)
     else:
         if saved_layout_path is not None:
