@@ -77,8 +77,8 @@ def _single_pane_block(
 # ── multi-repo pane block ─────────────────────────────────────────────────────
 #
 #  Left  28%: stacked lazygits (all repos)
-#  Center   : claude (top) + stacked shells (15% bottom, one per repo)
-#  Right 28%: control-plane status (full height)
+#  Center   : claude (full height)
+#  Right 28%: stacked shells (top) + status 25% (bottom) — mirrors single-repo left column
 
 def _multi_pane_block(
     profiles: list[dict],
@@ -122,7 +122,7 @@ def _multi_pane_block(
     )
     status_arg   = f" --repo '{_repo_filter}'" if _repo_filter else ""
 
-    shell_stack = f'{i}        pane size="15%" stacked=true {{\n'
+    shell_stack = f'{i}        pane stacked=true {{\n'
     for p in profiles:
         repo = p["repo_root"].replace("'", "'\\''")
         shell_stack += (
@@ -134,10 +134,10 @@ def _multi_pane_block(
 
     right_block = (
         f'{i}    pane size="28%" split_direction="horizontal" {{\n'
-        f'{i}        pane name="status" command="bash" {{\n'
+        + shell_stack
+        + f'{i}        pane size="25%" name="status" command="bash" {{\n'
         f'{i}            args "-c" "bash \'{cp_status}\' status{status_arg}"\n'
         f'{i}        }}\n'
-        + shell_stack
         + f'{i}    }}\n'
     )
 
