@@ -195,6 +195,10 @@ def _discover_repos() -> dict[str, dict]:
                 continue
             from fob.profile_loader import _expand_paths
             _expand_paths(data)
+            if "group" in data and "repo_root" not in data:
+                # Group profile — register by name, never overlay a repo entry
+                found[data["name"].lower()] = data
+                continue
             repo = Path(data.get("repo_root", ""))
             # Replace any auto-discovered entry for the same repo
             for name, entry in list(found.items()):
@@ -202,7 +206,7 @@ def _discover_repos() -> dict[str, dict]:
                     found[name] = data
                     break
             else:
-                found[data["name"]] = data
+                found[data["name"].lower()] = data
         except Exception:
             pass
     return found
@@ -296,13 +300,11 @@ def _run_picker(all_profiles: dict, multi: bool) -> list[dict]:
         p = all_profiles[k]
         if "group" in p:
             members = ", ".join(p["group"])
-            line = f"▸ {p['name']}  \033[2m{members}\033[0m"
-            display_to_key[f"▸ {p['name']}"] = k
-            return line
+            display_to_key[p["name"]] = k        # key = plain name
+            return f"▸ {p['name']}  \033[2m{members}\033[0m"
         else:
-            line = f"{dot} {p['name']}"
-            display_to_key[p["name"]] = k
-            return line
+            display_to_key[p["name"]] = k        # key = plain name
+            return f"{dot} {p['name']}"
 
     if has_fzf:
         fzf_lines = "\n".join(_display_line(k) for k in ordered_keys)
@@ -329,10 +331,10 @@ def _run_picker(all_profiles: dict, multi: bool) -> list[dict]:
             sys.exit(0)
         selected_raw = []
         for line in result.stdout.strip().splitlines():
-            line = line.strip()
-            # group lines start with ▸, repo lines start with ●/○
-            display_name = line.split("  ")[0]  # strip member list from group lines
-            k = display_to_key.get(display_name)
+            # Strip leading symbol (●, ○, ▸) and spaces, then drop member list
+            # that follows double-space on group lines: "▸ name  member1, …"
+            name = line.strip().lstrip("●○▸ ").split("  ")[0].strip()
+            k = display_to_key.get(name)
             if k:
                 selected_raw.append(all_profiles[k])
         return _expand_selection(selected_raw)
