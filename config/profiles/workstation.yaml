@@ -1,0 +1,26 @@
+name: WorkStation
+repo_root: /home/dev/Documents/GitHub/WorkStation
+
+claude:
+  continue: true
+  bootstrap_files:
+    - .fob/standing-orders.md
+    - .fob/active-mission.md
+    - .fob/objectives.md
+    - .fob/mission-log.md
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  logs:
+    command: docker compose -f compose/docker-compose.yml logs -f 2>/dev/null || echo 'Stack not running'
+  shell:
+    command: bash
+
+helpers:
+  test: python3 -m pytest test/ -q
+  up: bash scripts/up.sh
+  down: bash scripts/down.sh
+  health: bash scripts/health.sh
+  status: bash scripts/status.sh

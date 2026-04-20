@@ -1,0 +1,25 @@
+name: SwitchBoard
+repo_root: /home/dev/Documents/GitHub/SwitchBoard
+
+claude:
+  continue: true
+  bootstrap_files:
+    - .fob/standing-orders.md
+    - .fob/active-mission.md
+    - .fob/objectives.md
+    - .fob/mission-log.md
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  logs:
+    command: tail -f logs/decisions.jsonl 2>/dev/null || echo 'No decision log yet'
+  shell:
+    command: bash
+
+helpers:
+  test: .venv/bin/pytest -q
+  audit: .venv/bin/ruff check src/
+  dev: bash scripts/run_dev.sh
+  smoke: bash scripts/smoke_test.sh
