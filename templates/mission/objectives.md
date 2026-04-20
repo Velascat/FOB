@@ -1,6 +1,7 @@
 # Objectives
 
-Active work list. Update after each meaningful chunk of progress.
+_Durable work inventory — broader than the active mission, narrower than a full backlog._
+_Update after each meaningful chunk of progress. Keep it short and actionable._
 
 ## In Progress
 
@@ -17,4 +18,4 @@ Active work list. Update after each meaningful chunk of progress.
 
 ---
 
-_Keep this list short and focused. Completed items can be archived to mission-log.md._
+_Completed items can be archived to mission-log.md. This is not the primary task tracker — keep it focused._

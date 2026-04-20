@@ -345,7 +345,7 @@ def main() -> None:
                 if not (repo_root / ".fob").exists():
                     print(c(f"  .fob/ not found in {profile['name']} — initializing...", "YLW"))
                     commands.cmd_init([str(repo_root)], FOB_DIR)
-                write_bootstrap_file(repo_root, files=bootstrap_files, peer_roots=peer_roots or None)
+                write_bootstrap_file(repo_root, files=bootstrap_files, peer_roots=peer_roots or None, profile_name=profile["name"])
 
                 extra_files = [f for f in (bootstrap_files or [])
                                if Path(f).name not in {

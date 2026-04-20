@@ -1,6 +1,7 @@
 # Standing Orders
 
-Operating rules for Claude in this repo.
+_Stable repo policy for Claude. Low-churn. Not a scratchpad or task list._
+_Edit when project rules change — not during normal work sessions._
 
 ## Branch Policy
 
@@ -8,12 +9,11 @@ Operating rules for Claude in this repo.
 - Before making any changes, confirm you are on a feature branch.
 - If on a protected branch, stop and ask the operator to create a working branch.
 
-## Before Acting
+## Session Start
 
-1. Read `.fob/active-mission.md` — understand the current objective.
-2. Read `.fob/objectives.md` — check what's in progress and what's next.
-3. Read `.fob/mission-log.md` — review recent decisions and context.
-4. Summarize your plan before making any edits.
+1. Read `.fob/.briefing` — your compiled startup context for this session.
+2. Summarize your plan before making any edits.
+3. Confirm you are on the correct branch.
 
 ## During Work
 
@@ -33,3 +33,4 @@ Operating rules for Claude in this repo.
 - Do not run destructive commands (`rm -rf`, `git reset --hard`) without explicit operator confirmation.
 - Do not push to remote branches without the operator's explicit request.
 - Do not modify files outside the repo root without explicit justification.
+- Do not edit `.fob/.briefing` directly — it is generated at each launch.

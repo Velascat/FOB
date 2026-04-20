@@ -84,28 +84,40 @@ See [profiles.md](profiles.md) for format reference.
 
 ## Mission Files
 
-Each repo maintains `.fob/` with four files:
+## Two-Layer Continuity Model
 
-| File | Purpose |
-|------|---------|
-| `standing-orders.md` | Operating rules — branch policy, workflow loop, what not to do |
-| `active-mission.md` | Current objective and definition of done |
-| `objectives.md` | Ordered work list with in-progress / up-next / done sections |
-| `mission-log.md` | Scratch continuity — decisions, blockers, notes |
+FOB uses a two-layer model for Claude context:
 
-`fob init` creates these from `templates/mission/` if missing. `fob` auto-inits them on first launch of a repo.
+**Layer 1 — Human-editable source files** (edit these directly):
 
-`CLAUDE.md` in the repo root tells Claude to read these files at the start of each session.
+| File | Role |
+|------|------|
+| `active-mission.md` | Current objective — singular, concise, replace when focus changes |
+| `standing-orders.md` | Stable repo policy — branch rules, operating constraints, low-churn |
+| `objectives.md` | Work inventory — in-progress, up-next, done |
+| `mission-log.md` | Chronological log — decisions, stop points, what changed and why |
 
-## Mission Brief / Resume Behavior
+**Layer 2 — Compiled launch artifact** (generated, do not edit):
 
-`bootstrap.py` reads the `.fob/` files and builds a formatted mission brief written to `.fob/.briefing`.
+| File | Role |
+|------|------|
+| `.briefing` | Compiled startup context — all four files + runtime context, regenerated each launch |
 
-At launch, this file is refreshed before Zellij starts. The Claude pane runs `claude --continue`; the Claude Code runtime reads `CLAUDE.md` which directs Claude to read the mission files.
+`fob init` creates the source files from `templates/mission/` if missing. `fob` auto-inits on first launch.
 
-`fob resume` prints this brief to stdout so the operator can inspect what Claude will see.
+`CLAUDE.md` in the repo root tells Claude to read `.fob/.briefing` as the primary startup context.
 
-If `claude.peers` is set in the profile, `active-mission.md` and `objectives.md` from each peer repo are appended as `PEER: <name>` sections, giving Claude cross-repo context.
+## Briefing Generation
+
+`bootstrap.py` reads the four source files and compiles `.fob/.briefing` at launch time. The briefing includes:
+
+- Active Mission, Standing Orders, Objectives, Mission Log (from source files)
+- Runtime context: repo name, repo root, current branch, timestamp, profile name
+- Peer sections if `claude.peers` is configured
+
+The briefing is regenerated fresh on every `fob brief` run — it is always current.
+
+`fob resume` prints the compiled briefing to stdout so the operator can inspect what Claude will see.
 
 ## Dev Toolchain
 

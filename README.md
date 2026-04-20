@@ -57,20 +57,28 @@ fob
 
 That's it. The Python environment bootstraps itself on the first invocation. `.fob/` is auto-initialized in the repo if missing.
 
-## `.fob/` Mission Files
+## `.fob/` Continuity Model
 
-Each repo gets a `.fob/` directory initialized by `fob init`. Four files:
+FOB uses a two-layer model to give Claude structured, intentional startup context.
 
-| File | Purpose |
-|------|---------|
-| `standing-orders.md` | Claude's operating rules — branch policy, what not to do |
-| `active-mission.md` | What's being worked on right now and the definition of done |
-| `objectives.md` | Ordered task list — in-progress, up-next, done |
-| `mission-log.md` | Running log of decisions, blockers, and session notes |
+**Source files** — edit these directly:
 
-Claude reads all four at the start of each session. After progress, Claude updates `objectives.md` and `mission-log.md`. This is the continuity layer — not vague conversational memory, but explicit local state.
+| File | Role |
+|------|------|
+| `active-mission.md` | Current objective — singular, replace when focus changes |
+| `standing-orders.md` | Stable repo policy — branch rules, operating constraints |
+| `objectives.md` | Work inventory — in-progress, up-next, done |
+| `mission-log.md` | Chronological log — decisions, stop points, what changed |
 
-`fob resume` prints the current brief so you can inspect exactly what Claude will see.
+**Compiled artifact** — generated at launch, do not edit:
+
+| File | Role |
+|------|------|
+| `.briefing` | All four files + runtime context (branch, timestamp, repo) compiled into one startup document |
+
+At launch, FOB regenerates `.fob/.briefing` from the source files. Claude reads the briefing as its primary startup context — one structured entrypoint instead of raw multi-file discovery.
+
+`fob resume` prints the current briefing so you can inspect exactly what Claude will see.
 
 ## Commands
 

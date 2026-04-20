@@ -1,6 +1,7 @@
 # Mission Log
 
-Scratch pad for continuity across sessions. Recent decisions, blockers, and context.
+_Chronological continuity log. Decisions, stop points, what changed and why._
+_Not a task tracker — that's objectives.md. Keep entries concise and dated._
 
 ## Recent Decisions
 
@@ -10,14 +11,14 @@ _Log significant choices here so they survive context resets._
 |----------|-----------|------|
 | [what was decided] | [why] | [date] |
 
-## Active Blockers
+## Stop Points
 
-_Things waiting on external input or a deferred decision._
+_Where did you leave off? What should be verified next session?_
 
-- [blocker description]
+- [what to pick up next]
 
 ## Notes
 
-_Free-form scratch space. Clear periodically._
+_Free-form scratch. Clear periodically — old entries can be deleted once no longer relevant._
 
 ---
