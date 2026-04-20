@@ -5,7 +5,7 @@ A local operator console for Claude-driven development. Run `fob` from any repo 
 ## What You Get
 
 - **`fob`** — smart entrypoint: detects your repo, auto-launches the right workspace
-- **Structured workspace** — Claude in 60%, lazygit + logs + shell in the right column
+- **Structured workspace** — lazygit, logs, shell, and btop stacked on the left; Claude on the right
 - **`.fob/` mission files** — four local markdown files that give Claude explicit, persistent context across sessions
 - **Auto-discovery** — every git repo under `~/Documents/GitHub/` appears in the picker automatically; no YAML required
 - **Session persistence** — Zellij serialization survives terminal close and reboots
@@ -17,19 +17,22 @@ A local operator console for Claude-driven development. Run `fob` from any repo 
 3. If you're not in a repo, an interactive picker shows all repos under `~/Documents/GitHub/`
 4. A named Zellij session opens with a tab per selected repo
 5. In each tab: Claude starts with `claude --continue` and reads `.fob/` mission files for context
-6. lazygit, a log tail, and a shell live in the right column
+6. lazygit, logs, shell, and btop are stacked on the left — focused pane expands, others collapse to a title strip
 
 ```
 ┌─────────────────────────────────────────────┐
 │  FOB  │  VideoFoundry  │  ControlPlane  │   │  ← tab bar
-├─────────────────────┬──────────────────┤
-│                     │    lazygit       │
-│   claude --cont.    ├──────────────────┤
-│      (60%)          │  .fob/runtime.log│
-│                     ├──────────────────┤
-│                     │    shell         │
-└─────────────────────┴──────────────────┘
-│  NORMAL  │  fob  │  ...               │    │  ← status bar
+├─────────────┬───────────────────────────────┤
+│  lazygit    │                               │
+│  (expanded) │                               │
+├─────────────┤      claude --continue        │
+│  logs    ▸  │           (65%)               │
+├─────────────┤                               │
+│  shell   ▸  │                               │
+├─────────────┤                               │
+│  btop    ▸  │                               │
+└─────────────┴───────────────────────────────┘
+│  NORMAL  │  fob  │  ...                     │  ← status bar
 ```
 
 ## Why It Exists
@@ -80,6 +83,8 @@ Claude reads all four at the start of each session. After progress, Claude updat
 | `fob` | Smart launch — detects repo from cwd, opens workspace |
 | `fob brief [repo]` | Explicit launch with picker or named repo |
 | `fob brief --reset-layout` | Regenerate layout from defaults, discarding saved state |
+| `fob clear` | Delete saved layout for current repo |
+| `fob clear --all` | Delete all saved layouts |
 | `fob attach` | Re-attach to the running `fob` session |
 | `fob exit` | Kill the `fob` session and all panes |
 | `fob init [repo]` | Initialize `.fob/` mission files in a repo |
