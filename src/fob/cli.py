@@ -133,6 +133,8 @@ def show_help(_: list[str]) -> None:
             ("clear [--all]",     "Delete saved layout (current repo or all)"),
         ]),
         ("LAYOUT", [
+            ("save [profile]",    "Capture live Zellij tab → save to config/profiles/<name>.kdl"),
+            ("save --reset [p]",  "Delete saved layout, revert to YAML-generated"),
             ("layout save",       "Save current repo layout to .fob/layout.json"),
             ("layout load",       "Restore saved layout (starts Zellij session)"),
             ("layout show",       "Show saved layout metadata and path"),
@@ -540,6 +542,9 @@ def main() -> None:
                 print(c("  No restorable repos found.", "RED"))
                 sys.exit(1)
             _run_brief(profiles)
+
+        case "save":
+            commands.cmd_save(args, _profile_for_cwd(), FOB_DIR)
 
         case "layout":
             _require_zellij()

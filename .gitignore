@@ -12,3 +12,6 @@ config/profiles/*.yaml
 !config/profiles/fob.yaml
 !config/profiles/switchboard.yaml
 !config/profiles/workstation.yaml
+
+# Saved tab layouts (captured from live Zellij sessions — always private)
+config/profiles/*.kdl

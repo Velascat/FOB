@@ -745,6 +745,64 @@ def cmd_clear(args: list[str], default_profile: dict | None) -> None:
             print(c(f"  No saved layout for {repo_root.name}", "DIM"))
 
 
+# ── save ─────────────────────────────────────────────────────────────────────
+
+def cmd_save(args: list[str], default_profile: dict | None, fob_dir: Path) -> None:
+    """Capture the live Zellij tab layout and save it to config/profiles/<name>.kdl."""
+    import os
+    from fob.tab_capture import dump_live_layout, extract_panes_kdl, focused_tab_name
+
+    reset = "--reset" in args
+    named = [a for a in args if not a.startswith("--")]
+    profile_name = named[0] if named else (default_profile or {}).get("name")
+
+    if not profile_name:
+        print(c("✗ Cannot determine profile — run from inside a repo or pass a name.", "RED"))
+        sys.exit(1)
+
+    profiles_dir = fob_dir / "config" / "profiles"
+    kdl_path = profiles_dir / f"{profile_name.lower()}.kdl"
+
+    if reset:
+        if kdl_path.exists():
+            kdl_path.unlink()
+            print(c(f"  ✓ removed  {kdl_path.name}", "GRN"))
+            print(c(f"  Layout will be generated from YAML on next brief.", "DIM"))
+        else:
+            print(c(f"  No saved layout for '{profile_name}'.", "DIM"))
+        return
+
+    if not os.environ.get("ZELLIJ"):
+        print(c("✗ Not inside a Zellij session.", "RED"))
+        print(c("  Run `fob save` from inside the fob session.", "DIM"))
+        sys.exit(1)
+
+    kdl = dump_live_layout()
+    if not kdl:
+        print(c("✗ Could not dump live layout from Zellij.", "RED"))
+        sys.exit(1)
+
+    # Find the tab — by profile name (single-profile tab name matches profile name)
+    panes = extract_panes_kdl(kdl, tab_name=profile_name)
+    if panes is None:
+        # Try focused tab
+        focused = focused_tab_name(kdl)
+        if focused:
+            panes = extract_panes_kdl(kdl, tab_name=focused)
+            if panes:
+                print(c(f"  (no tab named '{profile_name}' — saving focused tab '{focused}')", "DIM"))
+
+    if not panes:
+        print(c(f"✗ No tab named '{profile_name}' found in live session.", "RED"))
+        print(c("  Make sure the tab is open and try again.", "DIM"))
+        sys.exit(1)
+
+    kdl_path.write_text(panes)
+    print(c(f"  ✓ saved  config/profiles/{kdl_path.name}", "GRN"))
+    print(c(f"  Next `fob brief {profile_name}` will use this layout.", "DIM"))
+    print(c(f"  Run `fob save --reset {profile_name}` to revert to YAML-generated.", "DIM"))
+
+
 # ── install ───────────────────────────────────────────────────────────────────
 
 def cmd_install(args: list[str], fob_dir: Path) -> None:

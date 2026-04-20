@@ -190,11 +190,25 @@ def _tab_chrome_wrap(panes_kdl: str) -> str:
 
 # ── public generators ─────────────────────────────────────────────────────────
 
+def _saved_panes_kdl(profile: dict, fob_dir: Path) -> str | None:
+    """Return saved KDL panes for a profile if one exists, else None."""
+    name = profile.get("name", "")
+    if not name:
+        return None
+    kdl_path = fob_dir / "config" / "profiles" / f"{name.lower()}.kdl"
+    if kdl_path.exists():
+        try:
+            return kdl_path.read_text()
+        except Exception:
+            pass
+    return None
+
+
 def generate_session_kdl(profiles: list[dict], fob_dir: Path) -> str:
     """Return session layout KDL string (no side effects)."""
     if len(profiles) == 1:
         tab_name = profiles[0]["name"]
-        panes    = _single_pane_block(profiles[0], fob_dir, indent="        ")
+        panes    = _saved_panes_kdl(profiles[0], fob_dir) or _single_pane_block(profiles[0], fob_dir, indent="        ")
     else:
         tab_name = _multi_tab_name(profiles)
         panes    = _multi_pane_block(profiles, fob_dir, indent="        ")
@@ -220,7 +234,7 @@ def generate_tab_layout(profiles: list[dict], fob_dir: Path) -> Path:
     """Write a standalone tab layout (for adding to running session) to /tmp."""
     if len(profiles) == 1:
         name  = profiles[0]["name"]
-        panes = _single_pane_block(profiles[0], fob_dir, indent="    ")
+        panes = _saved_panes_kdl(profiles[0], fob_dir) or _single_pane_block(profiles[0], fob_dir, indent="    ")
     else:
         name  = _multi_tab_name(profiles)
         panes = _multi_pane_block(profiles, fob_dir, indent="    ")
