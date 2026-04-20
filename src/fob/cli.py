@@ -71,7 +71,7 @@ def show_menu(_: list[str]) -> None:
     if has_fzf:
         fzf_input = "\n".join(f"{cmd:<10} {desc}" for cmd, desc in options)
         result = subprocess.run(
-            ["fzf", "--prompt", "  fob > ", "--height", "~12",
+            ["fzf", "--prompt", "  fob > ", "--height", "12",
              "--border", "--no-sort", "--tabstop", "1"],
             input=fzf_input, text=True, stdout=subprocess.PIPE,
         )
@@ -229,7 +229,7 @@ def _pick_profiles() -> list[dict]:
     if has_fzf:
         fzf_lines = "\n".join(f"{dot} {all_profiles[n]['name']}" for n in names)
         result = subprocess.run(
-            ["fzf", "--prompt", "  brief > ", "--height", "~12",
+            ["fzf", "--prompt", "  brief > ", "--height", "12",
              "--border", "--no-sort",
              "--multi", "--bind", "tab:toggle+down",
              "--header", f"Tab to select multiple · Enter to open{session_label}"],
