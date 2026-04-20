@@ -38,7 +38,7 @@ Prefer wrapper commands over raw shell sequences:
 | `fob audit` | `ruff check` / `tsc --noEmit` / custom lint |
 | `fob status` | `git status` + session/branch info |
 | `fob resume` | reading `.fob/` files manually |
-| `fob clear` | deleting `.fob/layout-state.kdl` manually |
+| `fob clear` | deleting `.fob/layout.json` + `.fob/layout.kdl` manually |
 | `fob cheat` | looking up keybindings |
 
 These are stable entrypoints. Claude should use them rather than constructing long shell pipelines.

@@ -71,14 +71,20 @@ claude:
 
 ## Layout Persistence
 
-FOB saves the generated Zellij layout to `.fob/layout-state.kdl` after each fresh session launch. On the next `fob brief` (if the session is dead), the saved layout is used — preserving any manual KDL edits. Layouts missing chrome (tab-bar/status-bar) are discarded and regenerated automatically.
+Layout persistence is an explicit, opt-in feature. Normal `fob brief` always generates a fresh layout — it does not silently restore a previous one.
 
-To reset to profile defaults:
+To save and restore a layout:
 ```bash
-fob clear               # reset current repo's layout
-fob clear --all         # reset all saved layouts
-fob brief --reset-layout  # reset and immediately relaunch
+fob layout save         # save current repo layout to .fob/layout.json + .fob/layout.kdl
+fob layout load         # restore saved layout (starts Zellij session)
+fob brief --layout      # full brief flow + restore saved layout
+fob layout show         # inspect what is saved (backend, profile, saved_at, path)
+fob layout reset        # delete saved layout for current repo
+fob clear               # same as layout reset
+fob clear --all         # delete saved layouts across all repos
 ```
+
+Saved layout metadata (`.fob/layout.json`) includes the backend, repo root, profile name, and timestamp. If the repo root in the saved file does not match the current path, `fob layout load` will refuse to apply it and explain the mismatch.
 
 ## Example: Configured Profile
 

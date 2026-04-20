@@ -7,6 +7,7 @@ fob (shell wrapper)
 └── src/fob/cli.py              ← main dispatcher + repo discovery + profile picker
     ├── profile_loader.py       ← YAML profile loading + validation
     ├── launcher.py             ← Zellij session creation / tab management
+    ├── layout.py               ← layout persistence (save/load/show/reset)
     ├── session.py              ← Zellij session state queries
     ├── guardrails.py           ← branch detection + warnings
     ├── bootstrap.py            ← Claude mission brief generation
@@ -34,7 +35,7 @@ Running `fob` (no subcommand) is equivalent to `fob brief`. The shell wrapper (`
 5. For each selected repo: initialize `.fob/` if missing, write `.fob/.briefing`, ensure `CLAUDE.md`
 6. Check branch via `guardrails.py` — warn if on main/master
 7. If session `fob` exists → add each repo as a new named tab (skip if tab already open)
-8. Otherwise → generate KDL layout, launch `zellij --session fob --new-session-with-layout <kdl>`
+8. Otherwise → generate fresh KDL layout (or use saved layout if `--layout` flag passed), launch `zellij --session fob --new-session-with-layout <kdl>`
 
 ## Python Environment
 
@@ -44,21 +45,18 @@ FOB uses an isolated venv at `.venv/` inside the FOB repo root. `bootstrap.sh` c
 
 FOB uses a **single named session**: `fob`. Each project opens as a **named tab** within that session.
 
-- Session survives terminal close, SSH disconnects, and reboots (Zellij serialization)
 - Tab bar and status bar are present in every tab via explicit chrome panes in each layout
 - Running `fob` from inside the session adds tabs without re-attaching
 - Dead (EXITED) sessions are auto-deleted before creating a new one
-- `fob exit` kills the session and all panes
+- `fob exit` kills the session and all panes; `tput reset` is run afterwards to clear any stale terminal state
 
 Layout files:
-- Session start: `/tmp/fob-session.kdl` — includes `default_tab_template` + named first tab + floating cheat pane; saved to `.fob/layout-state.kdl`
-- New tabs: `/tmp/fob-tab-<name>.kdl` — panes + explicit chrome + floating cheat pane
-- `fob brief --reset-layout` or `fob clear` regenerates from defaults, ignoring saved state
+- Session start: `/tmp/fob-session.kdl` — includes `default_tab_template` + named first tab
+- New tabs: `/tmp/fob-tab-<name>.kdl` — panes + explicit chrome
 
 Pane arrangement per tab:
 - **Left 35% stacked**: Git (`lazygit`), Logs (`tail -f .fob/runtime.log`), Shell (`bash`) — focused pane expands, others collapse to title strip
 - **Right 65%**: Claude pane (`claude --continue`)
-- **Floating**: Cheat sheet pane (toggle with Ctrl+p f)
 
 ## Profiles
 
@@ -82,7 +80,17 @@ See [profiles.md](profiles.md) for format reference.
 
 `_profile_for_cwd()` uses the same discovery to find which profile's `repo_root` contains the current directory — used by `fob status`, `fob resume`, `fob test`, and `fob audit`.
 
-## Mission Files
+## Layout Persistence
+
+Layout persistence is a separate, explicit feature — it is not coupled to general bootstrap or session startup.
+
+`layout.py` provides:
+- `save(repo_root, profile_name, kdl)` — writes `.fob/layout.kdl` + `.fob/layout.json` (metadata: backend, repo_root, profile_name, saved_at)
+- `load(repo_root)` — returns `(meta, kdl_path)` only if repo_root matches; returns `None` on mismatch
+- `load_any(repo_root)` — returns `(meta, kdl_path, is_current)` for show/reset regardless of mismatch
+- `reset(repo_root)` — deletes both files
+
+`fob brief` always generates a fresh layout. `fob brief --layout` is the explicit opt-in to restore a saved layout. `fob layout load` starts Zellij directly with the saved KDL (no briefing update).
 
 ## Two-Layer Continuity Model
 
