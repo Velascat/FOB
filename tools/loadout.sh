@@ -77,8 +77,23 @@ install_starship() {
 }
 
 install_gitcomet() {
-  echo -e "${CYN}▶ Installing gitcomet...${R}"
-  sudo apt-get install -y gitcomet
+  echo -e "${CYN}▶ Installing gitcomet from GitHub releases...${R}"
+  local ver
+  ver=$(curl -s "https://api.github.com/repos/Auto-Explore/GitComet/releases/latest" \
+    | grep '"tag_name"' | cut -d'"' -f4)
+  mkdir -p /tmp/gitcomet-extract
+  curl -Lo /tmp/gitcomet.tar.gz \
+    "https://github.com/Auto-Explore/GitComet/releases/latest/download/gitcomet-${ver}-linux-x86_64.tar.gz"
+  tar xf /tmp/gitcomet.tar.gz -C /tmp/gitcomet-extract/
+  local bin
+  bin=$(find /tmp/gitcomet-extract -name 'gitcomet' -type f | head -1)
+  if [[ -z "$bin" ]]; then
+    echo -e "${RED}✗ gitcomet binary not found in archive${R}"
+    rm -rf /tmp/gitcomet.tar.gz /tmp/gitcomet-extract
+    return 1
+  fi
+  sudo install "$bin" /usr/local/bin/gitcomet
+  rm -rf /tmp/gitcomet.tar.gz /tmp/gitcomet-extract
 }
 
 install_eza() {

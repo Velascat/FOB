@@ -190,7 +190,7 @@ def cmd_audit(args: list[str], default_profile: dict | None) -> None:
 DEPS = [
     ("zellij",  ["zellij"],          "Terminal workspace manager — https://zellij.dev"),
     ("claude",  ["claude"],           "Claude Code CLI — https://claude.ai/code"),
-    ("gitcomet", ["gitcomet"],         "Git UI — sudo apt install gitcomet"),
+    ("gitcomet", ["gitcomet"],         "Git UI — github.com/Auto-Explore/GitComet"),
     ("git",     ["git"],              "Version control"),
     ("python3", ["python3"],          "Python 3.x runtime"),
     ("fzf",     ["fzf"],              "Fuzzy finder"),
