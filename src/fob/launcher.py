@@ -76,69 +76,51 @@ def _single_pane_block(
 
 # ── multi-repo pane block ─────────────────────────────────────────────────────
 #
-#  Repos split left/right (even indices left, odd indices right).
-#  Each side column (28%):
-#    ├── stacked lazygits  (one per repo on that side)
-#    └── col-status script (fixed, always visible)
-#  Center 44%:
-#    ├── claude  — starts at ~/Documents/GitHub/
-#    └── stacked shells (one per repo, 15% total)
-
-def _side_column_block(
-    profiles: list[dict],
-    fob_dir: Path,
-    indent: str,
-    size: str = "28%",
-) -> str:
-    """Side column: stacked lazygits + fixed control-plane status pane."""
-    cp_status = str(_CP_STATUS).replace("'", "'\\''")
-    # Use explicit status_repos if set on any profile in this column; fall back
-    # to the repo directory names (which match ControlPlane board keys).
-    _slug_list  = ",".join(Path(p["repo_root"]).name for p in profiles)
-    _repo_filter = next(
-        (p["status_repos"] for p in profiles if "status_repos" in p),
-        _slug_list,
-    )
-    status_arg = f" --repo '{_repo_filter}'" if _repo_filter else ""
-    i = indent
-
-    lazygit_stack = f'{i}    pane stacked=true {{\n'
-    for p in profiles:
-        repo    = p["repo_root"].replace("'", "'\\''")
-        git_cmd = p.get("panes", {}).get("git", {}).get("command", "lazygit")
-        lazygit_stack += (
-            f'{i}        pane name="git-{p["name"]}" command="bash" {{\n'
-            f'{i}            args "-c" "cd \'{repo}\' && {git_cmd}; exec bash -l"\n'
-            f'{i}        }}\n'
-        )
-    lazygit_stack += f'{i}    }}\n'
-
-    status_pane = (
-        f'{i}    pane size="25%" name="status" command="bash" {{\n'
-        f'{i}        args "-c" "bash \'{cp_status}\' status{status_arg}"\n'
-        f'{i}    }}\n'
-    )
-
-    return (
-        f'{i}pane size="{size}" split_direction="horizontal" {{\n'
-        + lazygit_stack
-        + status_pane
-        + f'{i}}}'
-    )
-
+#  Left  28%: stacked lazygits (all repos)
+#  Center   : claude (top) + stacked shells (15% bottom, one per repo)
+#  Right 28%: control-plane status (full height)
 
 def _multi_pane_block(
     profiles: list[dict],
     fob_dir: Path,
     indent: str = "        ",
 ) -> str:
-    left  = profiles[::2]
-    right = profiles[1::2]
+    cp_status  = str(_CP_STATUS).replace("'", "'\\''")
     safe_cwd   = str(_GITHUB_DIR).replace("'", "'\\''")
     claude_cmd = get_claude_command(profiles[0], Path(profiles[0]["repo_root"]))
     i = indent
 
-    left_block   = _side_column_block(left,  fob_dir, i + "    ", size="28%") + "\n"
+    # Left column: all lazygits stacked
+    lazygit_stack = f'{i}        pane stacked=true {{\n'
+    for p in profiles:
+        repo    = p["repo_root"].replace("'", "'\\''")
+        git_cmd = p.get("panes", {}).get("git", {}).get("command", "lazygit")
+        lazygit_stack += (
+            f'{i}            pane name="git-{p["name"]}" command="bash" {{\n'
+            f'{i}                args "-c" "cd \'{repo}\' && {git_cmd}; exec bash -l"\n'
+            f'{i}            }}\n'
+        )
+    lazygit_stack += f'{i}        }}\n'
+
+    left_block = (
+        f'{i}    pane size="28%" {{\n'
+        + lazygit_stack
+        + f'{i}    }}\n'
+    )
+
+    # Center: claude only
+    center_block = (
+        f'{i}    pane name="claude" command="bash" {{\n'
+        f'{i}        args "-c" "cd \'{safe_cwd}\' && {claude_cmd}"\n'
+        f'{i}    }}\n'
+    )
+
+    # Right column: status (top) + stacked shells (bottom)
+    _repo_filter = next(
+        (p["status_repos"] for p in profiles if "status_repos" in p),
+        "",
+    )
+    status_arg   = f" --repo '{_repo_filter}'" if _repo_filter else ""
 
     shell_stack = f'{i}        pane size="15%" stacked=true {{\n'
     for p in profiles:
@@ -150,17 +132,14 @@ def _multi_pane_block(
         )
     shell_stack += f'{i}        }}\n'
 
-    center_block = (
-        f'{i}    pane split_direction="horizontal" {{\n'
-        f'{i}        pane name="claude" command="bash" {{\n'
-        f'{i}            args "-c" "cd \'{safe_cwd}\' && {claude_cmd}"\n'
+    right_block = (
+        f'{i}    pane size="28%" split_direction="horizontal" {{\n'
+        f'{i}        pane name="status" command="bash" {{\n'
+        f'{i}            args "-c" "bash \'{cp_status}\' status{status_arg}"\n'
         f'{i}        }}\n'
         + shell_stack
         + f'{i}    }}\n'
     )
-    right_block = (
-        _side_column_block(right, fob_dir, i + "    ", size="28%") + "\n"
-    ) if right else ""
 
     return (
         f'{i}pane split_direction="vertical" {{\n'

@@ -1,0 +1,26 @@
+name: ControlPlane
+repo_root: /home/dev/Documents/GitHub/ControlPlane
+
+claude:
+  continue: true
+  bootstrap_files:
+    - .fob/standing-orders.md
+    - .fob/active-mission.md
+    - .fob/objectives.md
+    - .fob/mission-log.md
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  logs:
+    command: tail -f logs/local/watch-all/goal.status.json 2>/dev/null || echo 'No status yet'
+  shell:
+    command: bash
+
+helpers:
+  test: .venv/bin/pytest -q
+  audit: .venv/bin/ruff check .
+  status: bash scripts/control-plane.sh watch-all-status
+  dev-up: bash scripts/control-plane.sh dev-up
+  dev-down: bash scripts/control-plane.sh dev-down

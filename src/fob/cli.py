@@ -223,6 +223,8 @@ def _autopick() -> list[dict]:
     # launch() will attach without duplicating if the tab is already there.
     cwd = Path.cwd()
     for profile in all_profiles.values():
+        if "repo_root" not in profile:
+            continue
         repo = Path(profile["repo_root"]).resolve()
         if cwd == repo or cwd.is_relative_to(repo):
             return [profile]
@@ -242,13 +244,40 @@ def _pick_multi(all: bool = False) -> list[dict]:
     return _run_picker(all_profiles, multi=True)
 
 
+def _expand_selection(selected_raw: list[dict]) -> list[dict]:
+    """Expand any group profiles in a selection into their constituent profiles."""
+    from fob.profile_loader import load_profile
+    result = []
+    seen = set()
+    for p in selected_raw:
+        if "group" in p:
+            for sub_name in p["group"]:
+                try:
+                    sub = load_profile(sub_name, PROFILES_DIR)
+                except FileNotFoundError as e:
+                    print(c(f"✗ {e}", "RED")); sys.exit(1)
+                if sub["name"] not in seen:
+                    result.append(sub)
+                    seen.add(sub["name"])
+        else:
+            if p["name"] not in seen:
+                result.append(p)
+                seen.add(p["name"])
+    return result
+
+
 def _run_picker(all_profiles: dict, multi: bool) -> list[dict]:
-    """Show fzf or numbered picker. multi=True enables Tab multi-select."""
+    """Show fzf or numbered picker. multi=True enables Tab multi-select.
+
+    Repos and groups are shown together; groups are prefixed with ▸ and
+    show their member list so the distinction is immediately visible.
+    """
     import subprocess
     from fob.session import session_exists
     from fob.launcher import FOB_SESSION
 
-    names = sorted(all_profiles.keys())
+    repo_keys  = sorted(k for k, v in all_profiles.items() if "repo_root" in v)
+    group_keys = sorted(k for k, v in all_profiles.items() if "group" in v and "repo_root" not in v)
     session_running = session_exists(FOB_SESSION)
 
     try:
@@ -258,32 +287,55 @@ def _run_picker(all_profiles: dict, multi: bool) -> list[dict]:
         has_fzf = False
 
     dot = "●" if session_running else "○"
-    session_label = "  (session running)" if session_running else ""
-    display_to_key = {all_profiles[n]["name"]: n for n in names}
+
+    # Build ordered list: groups first (so they're easy to spot), then repos
+    ordered_keys = group_keys + repo_keys
+    display_to_key: dict[str, str] = {}
+
+    def _display_line(k: str) -> str:
+        p = all_profiles[k]
+        if "group" in p:
+            members = ", ".join(p["group"])
+            line = f"▸ {p['name']}  \033[2m{members}\033[0m"
+            display_to_key[f"▸ {p['name']}"] = k
+            return line
+        else:
+            line = f"{dot} {p['name']}"
+            display_to_key[p["name"]] = k
+            return line
 
     if has_fzf:
-        fzf_lines = "\n".join(f"{dot} {all_profiles[n]['name']}" for n in names)
+        fzf_lines = "\n".join(_display_line(k) for k in ordered_keys)
         prompt = "  multi > " if multi else "  brief > "
         if multi:
             header = (
                 "\033[93mTab\033[0m mark/unmark  ·  "
-                "\033[93mEnter\033[0m open selected"
+                "\033[93mEnter\033[0m open  ·  "
+                "\033[35m▸ group\033[0m  \033[2mrepo\033[0m"
                 + ("  ·  \033[32msession running\033[0m" if session_running else "")
             )
         else:
             header = (
-                "\033[93mEnter\033[0m open"
+                "\033[93mEnter\033[0m open  ·  "
+                "\033[35m▸ group\033[0m  \033[2mrepo\033[0m"
                 + ("  ·  \033[32msession running\033[0m" if session_running else "")
             )
-        fzf_args = ["fzf", "--prompt", prompt, "--height", "12",
+        fzf_args = ["fzf", "--prompt", prompt, "--height", "14",
                     "--border", "--no-sort", "--ansi", "--header-first", "--header", header]
         if multi:
             fzf_args += ["--multi", "--bind", "tab:toggle+down"]
         result = subprocess.run(fzf_args, input=fzf_lines, text=True, stdout=subprocess.PIPE)
         if result.returncode != 0 or not result.stdout.strip():
             sys.exit(0)
-        selected_display = [line.lstrip("●○ ").strip() for line in result.stdout.strip().splitlines()]
-        return [all_profiles[display_to_key[d]] for d in selected_display if d in display_to_key]
+        selected_raw = []
+        for line in result.stdout.strip().splitlines():
+            line = line.strip()
+            # group lines start with ▸, repo lines start with ●/○
+            display_name = line.split("  ")[0]  # strip member list from group lines
+            k = display_to_key.get(display_name)
+            if k:
+                selected_raw.append(all_profiles[k])
+        return _expand_selection(selected_raw)
 
     # Numbered fallback
     print()
@@ -292,27 +344,33 @@ def _run_picker(all_profiles: dict, multi: bool) -> list[dict]:
         print(c("  session running — selected repos open as new tabs", "GRN"))
     print(c("─" * 44, "DIM"))
     sym = c("●", "GRN") if session_running else c("○", "DIM")
-    for i, name in enumerate(names, 1):
-        print(f"  {c(str(i), 'CYN')}  {sym}  {all_profiles[name]['name']}")
+    for i, k in enumerate(ordered_keys, 1):
+        p = all_profiles[k]
+        if "group" in p:
+            members = c(", ".join(p["group"]), "DIM")
+            print(f"  {c(str(i), 'CYN')}  {c('▸', 'MAG')}  {c(p['name'], 'B')}  {members}")
+        else:
+            print(f"  {c(str(i), 'CYN')}  {sym}  {p['name']}")
     print()
     prompt_text = "  repos (space-separated): " if multi else "  repo: "
-    print(c("  Enter numbers separated by spaces (e.g. 1 2)", "DIM") if multi else "")
+    if multi:
+        print(c("  Enter numbers separated by spaces (e.g. 1 2)", "DIM"))
     try:
         choice = input(c(prompt_text, "B")).strip()
     except (EOFError, KeyboardInterrupt):
         print()
         sys.exit(0)
 
-    selected = []
+    selected_raw = []
     for token in choice.replace(",", " ").split():
-        if token.isdigit() and 1 <= int(token) <= len(names):
-            selected.append(all_profiles[names[int(token) - 1]])
+        if token.isdigit() and 1 <= int(token) <= len(ordered_keys):
+            selected_raw.append(all_profiles[ordered_keys[int(token) - 1]])
         elif token in all_profiles:
-            selected.append(all_profiles[token])
-    if not selected:
+            selected_raw.append(all_profiles[token])
+    if not selected_raw:
         print(c("✗ No valid selection", "RED"))
         sys.exit(1)
-    return selected
+    return _expand_selection(selected_raw)
 
 
 def _require_zellij() -> None:
@@ -435,19 +493,20 @@ def main() -> None:
             named = [a for a in args if not a.startswith("--")]
             if named:
                 from fob.profile_loader import load_profile, validate_profile
-                profiles = []
+                raw = []
                 for pname in named:
                     try:
-                        p = load_profile(pname, PROFILES_DIR)
+                        raw.append(load_profile(pname, PROFILES_DIR))
                     except FileNotFoundError as e:
                         print(c(f"✗ {e}", "RED")); sys.exit(1)
+                profiles = _expand_selection(raw)
+                for p in profiles:
                     errs = validate_profile(p)
                     if errs:
-                        print(c(f"✗ Profile '{pname}' validation errors:", "RED"))
+                        print(c(f"✗ Profile '{p['name']}' validation errors:", "RED"))
                         for e in errs:
                             print(c(f"  · {e}", "DIM"))
                         sys.exit(1)
-                    profiles.append(p)
             else:
                 profiles = _autopick()
             _run_brief(profiles, use_saved_layout=use_saved_layout)
