@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
-# cheat.sh — full reference cheatsheet, designed to run in a floating pane
+# cheat.sh — FOB quick reference, runs in a floating pane
 
 R='\033[0m'; B='\033[1m'; DIM='\033[2m'
-BCYN='\033[96m'; BYLW='\033[93m'; BGRN='\033[92m'
-BMAG='\033[95m'; WHT='\033[97m'; RED='\033[91m'
+BCYN='\033[96m'; BYLW='\033[93m'; BGRN='\033[92m'; WHT='\033[97m'
 COLS="${COLUMNS:-90}"
 
-hr()    { printf "${BCYN}${DIM}%*s${R}\n" "$COLS" '' | tr ' ' '─'; }
-sec()   { echo; hr; printf "  ${B}${WHT}%s${R}\n" "$1"; hr; }
-K()     { printf "  ${BYLW}${B}%-26s${R}  ${BGRN}%s${R}\n" "$1" "$2"; }
-CMD()   { printf "  ${BCYN}%-26s${R}  ${DIM}%s${R}\n" "$1" "$2"; }
-SUB()   { echo -e "\n  ${B}${WHT}$1${R}"; }
+hr()  { printf "${BCYN}${DIM}%*s${R}\n" "$COLS" '' | tr ' ' '─'; }
+sec() { echo; hr; printf "  ${B}${WHT}%s${R}\n" "$1"; hr; }
+K()   { printf "  ${BYLW}${B}%-26s${R}  ${BGRN}%s${R}\n" "$1" "$2"; }
+CMD() { printf "  ${BCYN}%-26s${R}  ${DIM}%s${R}\n" "$1" "$2"; }
+SUB() { echo -e "\n  ${B}${WHT}$1${R}"; }
 
-_cheat_content() {
 echo -e "${BCYN}${B}"
 cat << 'BANNER'
   ███████╗ ██████╗ ██████╗     CHEATSHEET
@@ -24,124 +22,55 @@ cat << 'BANNER'
 BANNER
 echo -e "${R}"
 
-# ── FOB Commands ──────────────────────────────────────────────────────────────
-sec "FOB COMMANDS"
-CMD "fob [brief] [repo]"    "auto-select current repo and launch"
-CMD "fob brief --layout"    "launch using saved layout"
-CMD "fob multi"             "multi-select picker — open several repos as tabs"
-CMD "fob restore [--show]"  "re-open last saved session group; --show to preview"
-CMD "fob attach"            "re-attach to running fob session"
-CMD "fob kill"              "terminate session + all panes (warns first)"
-CMD "fob status [--all]"    "session, layout, branch, .fob/ state; --all for every repo"
-CMD "fob map [--all] [--json]" "state snapshot; --all for every repo"
-CMD "fob resume"            "print Claude mission brief"
-CMD "fob init [repo]"       "initialize .fob/ mission files"
-CMD "fob test"              "run project tests"
-CMD "fob audit"             "run project audit"
-CMD "fob doctor"            "check all dependencies"
-CMD "fob loadout"           "install and configure dev tools"
-CMD "fob cheat"             "this screen"
+sec "FOB WORKSPACE"
+CMD "fob [brief] [repo]"       "launch — auto-selects current repo"
+CMD "fob multi"                "multi-select picker — open several repos"
+CMD "fob restore [--show]"     "re-open last saved session group"
+CMD "fob attach"               "re-attach to running fob session"
+CMD "fob kill"                 "terminate session + all panes"
+echo
+CMD "fob status [--all]"       "session, layout, branch, .fob/ state"
+CMD "fob resume"               "print Claude mission brief"
+CMD "fob init [repo]"          "initialize .fob/ mission files"
+CMD "fob test / fob audit"     "run project tests / audit"
+CMD "fob doctor"               "check all dependencies"
+CMD "fob loadout"              "install / update dev tools"
 echo
 
-sec "RESET & RECOVERY"
-CMD "fob reset"             "full reset — session + layout + state (confirms)"
-CMD "fob reset --session"   "kill session only"
-CMD "fob reset --layout"    "clear saved layout only"
-CMD "fob reset --state"     "delete .fob/ mission files only"
-CMD "fob clear [--all]"     "delete saved layout (this repo or all)"
+sec "RESET & LAYOUT"
+CMD "fob reset"                "full reset — session + layout + state"
+CMD "fob reset --session"      "kill session only"
+CMD "fob reset --layout"       "clear saved layout only"
+CMD "fob reset --state"        "delete .fob/ mission files only"
+CMD "fob layout save/load"     "save or restore workspace layout"
 echo
 
-sec "LAYOUT"
-CMD "fob layout save"       "save repo layout to .fob/layout.json"
-CMD "fob layout load"       "restore saved layout (starts new session)"
-CMD "fob layout show"       "show saved layout metadata and path"
-CMD "fob layout reset"      "delete saved layout for current repo"
-echo
-
-# ── Zellij ────────────────────────────────────────────────────────────────────
 sec "ZELLIJ"
 
 SUB "Panes"
 K "Ctrl+p ↑↓←→"      "navigate panes"
-K "Ctrl+p n"          "new pane"
-K "Ctrl+p d"          "split down"
-K "Ctrl+p r"          "split right"
+K "Ctrl+p n / d / r"  "new / split down / split right"
 K "Ctrl+p z"          "zoom pane fullscreen"
-K "Ctrl+p x"          "close pane"
 K "Ctrl+p f"          "toggle floating panes"
-K "Ctrl+p e"          "embed / float pane"
+K "Ctrl+p x"          "close pane"
 
 SUB "Tabs"
 K "Ctrl+t t"          "new tab"
-K "Ctrl+t ←→"         "switch tab"
-K "Ctrl+t 1-9"        "jump to tab"
+K "Ctrl+t ←→ / 1-9"  "switch tab"
 K "Ctrl+t r"          "rename tab"
 K "Ctrl+t x"          "close tab"
 
-SUB "Sessions"
+SUB "Sessions & Scroll"
 K "Ctrl+o d"          "detach (session keeps running)"
 K "Ctrl+o w"          "session manager"
-
-SUB "Scroll / Copy"
 K "Ctrl+s ↑↓ / j k"  "scroll"
 K "Ctrl+s e"          "edit scrollback in \$EDITOR"
-K "select text"       "auto-copied to clipboard"
-K "Shift+right-click" "terminal native clipboard menu"
-
-SUB "Misc"
-K "Ctrl+g"            "lock / unlock all keybindings"
 K "Ctrl+h"            "help — all keybindings"
 echo
 
-# ── Dev Tools ─────────────────────────────────────────────────────────────────
-sec "DEV TOOLS"
-
-SUB "fzf — fuzzy finder"
-CMD "Ctrl+r"              "fuzzy search shell history"
-CMD "Ctrl+t"              "fuzzy search files"
-CMD "Alt+c"               "fuzzy cd into directory"
-
-SUB "lazygit — git TUI"
-CMD "space"               "stage / unstage file"
-CMD "c"                   "commit"
-CMD "p"                   "push"
-CMD "P"                   "pull"
-CMD "b"                   "branch menu"
-CMD "?"                   "help / all keybindings"
-
-SUB "eza — modern ls"
-CMD "eza --icons"         "ls with icons"
-CMD "eza -la --git"       "long list with git status"
-CMD "eza --tree -L 3"     "directory tree (3 levels)"
-
-SUB "bat — syntax cat"
-CMD "bat <file>"          "view file with syntax highlight"
-CMD "bat -l python <file>" "force language"
-
-SUB "zoxide — smart cd"
-CMD "z <partial>"         "jump to most used matching dir"
-CMD "zi"                  "interactive fuzzy jump (needs fzf)"
-
-SUB "delta — git diffs"
-CMD "git diff"            "auto-uses delta if configured"
-CMD "git log -p"          "syntax-highlighted patch log"
-
-SUB "rg — ripgrep"
-CMD "rg <pattern>"        "search files recursively"
-CMD "rg <pattern> -t py"  "search only Python files"
-CMD "rg <pattern> -l"     "list matching files only"
-
-SUB "fd — smart find"
-CMD "fd <name>"           "find files by name (respects .gitignore)"
-CMD "fd -e py"            "find by extension"
-CMD "fd -t d <name>"      "find directories only"
-echo
-
 hr
-echo -e "  ${DIM}Ctrl+p f to toggle floating  ·  Ctrl+s to scroll  ·  Ctrl+p x to close${R}"
+echo -e "  ${DIM}Ctrl+p f to toggle floating  ·  Ctrl+p x to close${R}"
 hr
 echo
-}
 
-_cheat_content
 read -rsp "" 2>/dev/null || true

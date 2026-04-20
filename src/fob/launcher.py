@@ -41,7 +41,6 @@ def _single_pane_block(
     )
     safe_repo  = repo.replace("'", "'\\''")
     safe_cwd   = str(claude_cwd).replace("'", "'\\''") if claude_cwd else safe_repo
-    welcome    = str(fob_dir / "tools" / "welcome.sh").replace("'", "'\\''")
     cp_status  = str(_CP_STATUS).replace("'", "'\\''")
     repo_slug  = Path(repo).name
     i = indent
@@ -63,7 +62,7 @@ def _single_pane_block(
         f'{i}            args "-c" "cd \'{safe_cwd}\' && {claude_cmd}"\n'
         f'{i}        }}\n'
         f'{i}        pane size="15%" name="shell" command="bash" {{\n'
-        f'{i}            args "-c" "cd \'{safe_cwd}\' && bash \'{welcome}\'"\n'
+        f'{i}            args "-c" "cd \'{safe_cwd}\' && exec bash -l"\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
         # Right column: logs
@@ -128,7 +127,6 @@ def _multi_pane_block(
     left  = profiles[::2]
     right = profiles[1::2]
     safe_cwd   = str(_GITHUB_DIR).replace("'", "'\\''")
-    welcome    = str(fob_dir / "tools" / "welcome.sh").replace("'", "'\\''")
     claude_cmd = get_claude_command(profiles[0], Path(profiles[0]["repo_root"]))
     i = indent
 
@@ -139,7 +137,7 @@ def _multi_pane_block(
         repo = p["repo_root"].replace("'", "'\\''")
         shell_stack += (
             f'{i}            pane name="shell-{p["name"]}" command="bash" {{\n'
-            f'{i}                args "-c" "cd \'{repo}\' && bash \'{welcome}\'"\n'
+            f'{i}                args "-c" "cd \'{repo}\' && exec bash -l"\n'
             f'{i}            }}\n'
         )
     shell_stack += f'{i}        }}\n'
