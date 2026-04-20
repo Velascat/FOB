@@ -73,7 +73,7 @@ def show_menu(_: list[str]) -> None:
         result = subprocess.run(
             ["fzf", "--prompt", "  fob > ", "--height", "~12",
              "--border", "--no-sort", "--tabstop", "1"],
-            input=fzf_input, text=True, capture_output=True,
+            input=fzf_input, text=True, stdout=subprocess.PIPE,
         )
         if result.returncode != 0 or not result.stdout.strip():
             sys.exit(0)
@@ -200,13 +200,12 @@ def _pick_profiles() -> list[dict]:
 
     names = sorted(all_profiles.keys())
 
-    # Auto-select by cwd only when launching from outside Zellij
-    if not os.environ.get("ZELLIJ"):
-        cwd = Path.cwd()
-        for name, profile in all_profiles.items():
-            repo = Path(profile["repo_root"]).resolve()
-            if cwd == repo or cwd.is_relative_to(repo):
-                return [profile]
+    # Auto-select by cwd if inside a known repo
+    cwd = Path.cwd()
+    for name, profile in all_profiles.items():
+        repo = Path(profile["repo_root"]).resolve()
+        if cwd == repo or cwd.is_relative_to(repo):
+            return [profile]
 
     session_running = session_exists(FOB_SESSION)
 
@@ -229,7 +228,7 @@ def _pick_profiles() -> list[dict]:
              "--border", "--no-sort",
              "--multi", "--bind", "tab:toggle+down",
              "--header", f"Tab to select multiple · Enter to open{session_label}"],
-            input=fzf_lines, text=True, capture_output=True,
+            input=fzf_lines, text=True, stdout=subprocess.PIPE,
         )
         if result.returncode != 0 or not result.stdout.strip():
             sys.exit(0)
