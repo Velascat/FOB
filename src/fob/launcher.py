@@ -120,59 +120,14 @@ def generate_tab_layout(profile: dict, fob_dir: Path) -> Path:
     return tmp
 
 
-def generate_tool_tab_layout(name: str, command: str) -> Path:
-    """Single-pane tab with chrome for session-level tools (btop, gitcomet, etc.)."""
-    layout = (
-        'layout {\n'
-        '    pane size=1 borderless=true {\n'
-        '        plugin location="tab-bar"\n'
-        '    }\n'
-        f'    pane name="{name}" command="bash" {{\n'
-        f'        args "-c" "{command}; exec bash -l"\n'
-        '    }\n'
-        '    pane size=2 borderless=true {\n'
-        '        plugin location="status-bar"\n'
-        '    }\n'
-        '}\n'
-    )
-    tmp = Path(tempfile.gettempdir()) / f"fob-tab-{name}.kdl"
-    tmp.write_text(layout)
-    return tmp
-
-
-def _add_tool_tabs(existing_tabs: set[str]) -> None:
-    """Add btop as a session-level tab if not already open."""
-    tool_tabs = [
-        ("btop", "command -v btop &>/dev/null && btop"),
-    ]
-    for name, cmd in tool_tabs:
-        if name in existing_tabs:
-            continue
-        layout_path = generate_tool_tab_layout(name, cmd)
-        subprocess.run([
-            "zellij", "--session", FOB_SESSION,
-            "action", "new-tab",
-            "--name", name,
-            "--layout", str(layout_path),
-        ])
-
-
 def _launch_with_extra_tabs(extra_profiles: list[dict], fob_dir: Path, layout_path: Path) -> None:
-    """Start session then add extra profile tabs and tool tabs via a background wrapper script."""
+    """Start session then add extra tabs via a background wrapper script."""
     import shlex
     adds = []
     for profile in extra_profiles:
         tab_layout = generate_tab_layout(profile, fob_dir)
         adds.append(
             f"zellij --session {FOB_SESSION} action new-tab --name {shlex.quote(profile['name'])} --layout {shlex.quote(str(tab_layout))}"
-        )
-    tool_tabs = [
-        ("btop", "command -v btop &>/dev/null && btop"),
-    ]
-    for name, cmd in tool_tabs:
-        tl = generate_tool_tab_layout(name, cmd)
-        adds.append(
-            f"zellij --session {FOB_SESSION} action new-tab --name {shlex.quote(name)} --layout {shlex.quote(str(tl))}"
         )
     script = f"""#!/usr/bin/env bash
 zellij --session {FOB_SESSION} --new-session-with-layout {shlex.quote(str(layout_path))} &
@@ -247,7 +202,6 @@ def launch(profiles: list[dict], fob_dir: Path, reset_layout: bool = False) -> N
                 "--name", profile["name"],
                 "--layout", str(layout_path),
             ])
-        _add_tool_tabs(existing_tabs)
         if os.environ.get("ZELLIJ"):
             print(f"  → Tab added")
         else:

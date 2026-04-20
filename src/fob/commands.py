@@ -206,7 +206,6 @@ RICE_TOOLS = [
     ("zoxide",    ["zoxide"],           "Smart cd — jump with z"),
     ("delta",     ["delta"],            "Beautiful git diffs"),
     ("lazygit",   ["lazygit"],            "Full git TUI — stage, commit, diff, log visually"),
-    ("btop",      ["btop"],             "System monitor"),
     ("starship",  ["starship"],         "Cross-shell prompt"),
     ("fastfetch", ["fastfetch"],        "System info display"),
 ]

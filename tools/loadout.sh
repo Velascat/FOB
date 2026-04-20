@@ -35,7 +35,6 @@ TOOLS=(
   "zoxide|zoxide|zoxide|Smart cd — learns your dirs, jump with z"
   "delta|git-delta|delta|Beautiful git diffs with syntax highlighting"
   "lazygit|lazygit|lazygit|Full git TUI — stage, commit, diff, log visually"
-  "btop|btop|btop|Beautiful system monitor — CPU/RAM/network/processes"
   "starship|starship|starship|Cross-shell prompt — fast, informative, customizable"
   "fastfetch|fastfetch|fastfetch|System info display — the classic flex"
 )

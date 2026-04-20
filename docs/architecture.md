@@ -59,7 +59,6 @@ Pane arrangement per tab:
 - **Left 35% stacked**: Git (`lazygit`), Logs (`tail -f .fob/runtime.log`), Shell (`bash`) — focused pane expands, others collapse to title strip
 - **Right 65%**: Claude pane (`claude --continue`)
 - **Floating**: Cheat sheet pane (toggle with Ctrl+p f)
-- **Session tabs** (added once per session): `btop` and `lazygit` as dedicated tabs
 
 ## Profiles
 
@@ -110,6 +109,6 @@ If `claude.peers` is set in the profile, `active-mission.md` and `objectives.md`
 
 ## Dev Toolchain
 
-`fob loadout` runs `tools/loadout.sh` — an interactive installer for the recommended dev toolchain (fzf, bat, eza, ripgrep, fd, zoxide, delta, lazygit, btop, starship, fastfetch). Tools not available in Ubuntu's standard apt repos (eza, git-delta, fastfetch) use custom GitHub release installers.
+`fob loadout` runs `tools/loadout.sh` — an interactive installer for the recommended dev toolchain (fzf, bat, eza, ripgrep, fd, zoxide, delta, lazygit, starship, fastfetch). Tools not available in Ubuntu's standard apt repos (eza, git-delta, fastfetch) use custom GitHub release installers.
 
 `fob doctor` checks both core FOB dependencies and all loadout tools, with install status for each.

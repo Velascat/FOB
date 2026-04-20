@@ -5,7 +5,7 @@ A local operator console for Claude-driven development. Run `fob` from any repo 
 ## What You Get
 
 - **`fob`** — smart entrypoint: detects your repo, auto-launches the right workspace
-- **Structured workspace** — lazygit, logs, and shell stacked on the left; Claude on the right; dedicated btop and lazygit tabs per session
+- **Structured workspace** — lazygit, logs, and shell stacked on the left; Claude on the right
 - **`.fob/` mission files** — four local markdown files that give Claude explicit, persistent context across sessions
 - **Auto-discovery** — every git repo under `~/Documents/GitHub/` appears in the picker automatically; no YAML required
 - **Session persistence** — Zellij serialization survives terminal close and reboots
@@ -18,20 +18,19 @@ A local operator console for Claude-driven development. Run `fob` from any repo 
 4. A named Zellij session opens with a tab per selected repo
 5. In each tab: Claude starts with `claude --continue` and reads `.fob/` mission files for context
 6. lazygit, logs, and shell are stacked on the left — focused pane expands, others collapse to a title strip
-7. `btop` and `lazygit` open as dedicated session tabs (added once per session)
 
 ```
-┌──────────────────────────────────────────────────────┐
-│  FOB  │  VideoFoundry  │  btop  │  lazygit  │  ...  │  ← tab bar
-├─────────────┬────────────────────────────────────────┤
-│  lazygit    │                                        │
-│  (expanded) │                                        │
-├─────────────┤         claude --continue              │
-│  logs    ▸  │              (65%)                     │
-├─────────────┤                                        │
-│  shell   ▸  │                                        │
-└─────────────┴────────────────────────────────────────┘
-│  NORMAL  │  fob  │  ...                              │  ← status bar
+┌──────────────────────────────────────────────────┐
+│  FOB  │  VideoFoundry  │  ControlPlane  │  ...   │  ← tab bar
+├─────────────┬────────────────────────────────────┤
+│  lazygit    │                                    │
+│  (expanded) │                                    │
+├─────────────┤      claude --continue             │
+│  logs    ▸  │           (65%)                    │
+├─────────────┤                                    │
+│  shell   ▸  │                                    │
+└─────────────┴────────────────────────────────────┘
+│  NORMAL  │  fob  │  ...                          │  ← status bar
 ```
 
 ## Why It Exists
