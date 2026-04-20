@@ -34,7 +34,7 @@ BANNER = r"""
 
 def _dep_status_line() -> str:
     import subprocess
-    deps = ["zellij", "claude", "lazygit", "git", "python3", "fzf"]
+    deps = ["zellij", "claude", "gitcomet", "git", "python3", "fzf"]
     parts = []
     for d in deps:
         try:
@@ -116,7 +116,7 @@ def show_help(_: list[str]) -> None:
             ("clear [--all]",    "Delete saved layout state (current repo or all)"),
             ("init    [repo]",    "Initialize .fob/ state files in repo"),
             ("resume",            "Print Claude resume context from .fob/"),
-            ("doctor",            "Check dependencies (Zellij, Claude, lazygit…)"),
+            ("doctor",            "Check dependencies (Zellij, Claude, gitcomet…)"),
         ]),
         ("OPS", [
             ("status",            "Show repo, branch, session, .fob/ state"),

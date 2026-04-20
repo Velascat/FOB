@@ -26,7 +26,7 @@ echo
 hr
 echo -e "  ${B}TOOL STATUS${R}"
 hr
-chk lazygit  && ok lazygit  "git TUI"            || miss lazygit  "run: fob loadout"
+chk gitcomet && ok gitcomet "git UI"             || miss gitcomet "run: fob loadout"
 chk fzf      && ok fzf      "fuzzy finder"       || miss fzf      "run: fob loadout"
 (chk bat || command -v batcat &>/dev/null) \
              && ok bat      "syntax cat"         || miss bat      "run: fob loadout"

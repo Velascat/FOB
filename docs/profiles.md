@@ -23,7 +23,7 @@ claude:
 
 panes:
   git:
-    command: lazygit                       # Override default git pane command
+    command: gitcomet                       # Override default git pane command
   logs:
     command: tail -f logs/dev.log 2>/dev/null
 

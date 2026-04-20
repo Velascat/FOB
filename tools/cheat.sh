@@ -83,7 +83,7 @@ CMD "Ctrl+r"              "fuzzy search shell history"
 CMD "Ctrl+t"              "fuzzy search files"
 CMD "Alt+c"               "fuzzy cd into directory"
 
-SUB "lazygit — git TUI"
+SUB "gitcomet — git UI"
 CMD "space"               "stage / unstage file"
 CMD "c"                   "commit"
 CMD "p"                   "push"

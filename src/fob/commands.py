@@ -190,7 +190,7 @@ def cmd_audit(args: list[str], default_profile: dict | None) -> None:
 DEPS = [
     ("zellij",  ["zellij"],          "Terminal workspace manager — https://zellij.dev"),
     ("claude",  ["claude"],           "Claude Code CLI — https://claude.ai/code"),
-    ("lazygit", ["lazygit"],          "Git TUI — brew install lazygit / apt install lazygit"),
+    ("gitcomet", ["gitcomet"],         "Git UI — sudo apt install gitcomet"),
     ("git",     ["git"],              "Version control"),
     ("python3", ["python3"],          "Python 3.x runtime"),
     ("fzf",     ["fzf"],              "Fuzzy finder"),
@@ -205,7 +205,7 @@ RICE_TOOLS = [
     ("fd",        ["fd", "fdfind"],     "Smarter find"),
     ("zoxide",    ["zoxide"],           "Smart cd — jump with z"),
     ("delta",     ["delta"],            "Beautiful git diffs"),
-    ("lazygit",   ["lazygit"],          "Full git TUI"),
+    ("gitcomet",  ["gitcomet"],          "Fast git UI — stage, commit, diff, log"),
     ("btop",      ["btop"],             "System monitor"),
     ("starship",  ["starship"],         "Cross-shell prompt"),
     ("fastfetch", ["fastfetch"],        "System info display"),

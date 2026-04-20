@@ -16,7 +16,7 @@ def _pane_block(profile: dict, fob_dir: Path, indent: str = "        ") -> str:
     repo = profile["repo_root"]
     panes = profile.get("panes", {})
     claude_cmd = get_claude_command(profile, Path(repo))
-    git_cmd = panes.get("git", {}).get("command", "lazygit")
+    git_cmd = panes.get("git", {}).get("command", "gitcomet")
     logs_cmd = panes.get("logs", {}).get(
         "command",
         "tail -f .fob/runtime.log 2>/dev/null || echo 'No runtime.log yet'",

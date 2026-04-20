@@ -56,7 +56,7 @@ Layout files:
 - `fob brief --reset-layout` or `fob clear` regenerates from defaults, ignoring saved state
 
 Pane arrangement per tab:
-- **Left 35% stacked**: Git (`lazygit`), Logs (`tail -f .fob/runtime.log`), Shell (`bash`), btop — focused pane expands, others collapse to title strip
+- **Left 35% stacked**: Git (`gitcomet`), Logs (`tail -f .fob/runtime.log`), Shell (`bash`), btop — focused pane expands, others collapse to title strip
 - **Right 65%**: Claude pane (`claude --continue`)
 - **Floating**: Cheat sheet pane (toggle with Ctrl+p f)
 
@@ -109,6 +109,6 @@ If `claude.peers` is set in the profile, `active-mission.md` and `objectives.md`
 
 ## Dev Toolchain
 
-`fob loadout` runs `tools/loadout.sh` — an interactive installer for the recommended dev toolchain (fzf, bat, eza, ripgrep, fd, zoxide, delta, lazygit, btop, starship, fastfetch). Tools not available in Ubuntu's standard apt repos (eza, git-delta, fastfetch) use custom GitHub release installers.
+`fob loadout` runs `tools/loadout.sh` — an interactive installer for the recommended dev toolchain (fzf, bat, eza, ripgrep, fd, zoxide, delta, gitcomet, btop, starship, fastfetch). Tools not available in Ubuntu's standard apt repos (eza, git-delta, fastfetch) use custom GitHub release installers.
 
 `fob doctor` checks both core FOB dependencies and all loadout tools, with install status for each.

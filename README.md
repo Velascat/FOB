@@ -5,7 +5,7 @@ A local operator console for Claude-driven development. Run `fob` from any repo 
 ## What You Get
 
 - **`fob`** — smart entrypoint: detects your repo, auto-launches the right workspace
-- **Structured workspace** — lazygit, logs, shell, and btop stacked on the left; Claude on the right
+- **Structured workspace** — gitcomet, logs, shell, and btop stacked on the left; Claude on the right
 - **`.fob/` mission files** — four local markdown files that give Claude explicit, persistent context across sessions
 - **Auto-discovery** — every git repo under `~/Documents/GitHub/` appears in the picker automatically; no YAML required
 - **Session persistence** — Zellij serialization survives terminal close and reboots
@@ -17,13 +17,13 @@ A local operator console for Claude-driven development. Run `fob` from any repo 
 3. If you're not in a repo, an interactive picker shows all repos under `~/Documents/GitHub/`
 4. A named Zellij session opens with a tab per selected repo
 5. In each tab: Claude starts with `claude --continue` and reads `.fob/` mission files for context
-6. lazygit, logs, shell, and btop are stacked on the left — focused pane expands, others collapse to a title strip
+6. gitcomet, logs, shell, and btop are stacked on the left — focused pane expands, others collapse to a title strip
 
 ```
 ┌─────────────────────────────────────────────┐
 │  FOB  │  VideoFoundry  │  ControlPlane  │   │  ← tab bar
 ├─────────────┬───────────────────────────────┤
-│  lazygit    │                               │
+│  gitcomet    │                               │
 │  (expanded) │                               │
 ├─────────────┤      claude --continue        │
 │  logs    ▸  │           (65%)               │
@@ -48,7 +48,7 @@ source ~/.bashrc
 fob doctor            # verify dependencies
 ```
 
-Dependencies: `zellij`, `claude` (Claude Code CLI), `lazygit`, `git`, `python3`, `fzf`
+Dependencies: `zellij`, `claude` (Claude Code CLI), `gitcomet`, `git`, `python3`, `fzf`
 
 ## First Run
 
