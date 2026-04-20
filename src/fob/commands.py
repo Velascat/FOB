@@ -308,7 +308,9 @@ def cmd_exit(args: list[str]) -> None:
         print(c(f"  No active session '{FOB_SESSION}'", "DIM"))
         return
     print(c(f"  Killing session '{FOB_SESSION}' and all panes...", "YLW"))
-    os.execvp("zellij", ["zellij", "kill-session", FOB_SESSION])
+    subprocess.run(["zellij", "kill-session", FOB_SESSION])
+    # Reset terminal — Zellij leaves mouse tracking enabled when killed externally
+    subprocess.run(["tput", "reset"])
 
 
 def cmd_cheat(args: list[str], scripts_dir: Path) -> None:
