@@ -16,7 +16,7 @@ def _pane_block(profile: dict, fob_dir: Path, indent: str = "        ") -> str:
     repo = profile["repo_root"]
     panes = profile.get("panes", {})
     claude_cmd = get_claude_command(profile, Path(repo))
-    git_cmd = panes.get("git", {}).get("command", "gitcomet")
+    git_cmd = panes.get("git", {}).get("command", "lazygit")
     logs_cmd = panes.get("logs", {}).get(
         "command",
         "tail -f .fob/runtime.log 2>/dev/null || echo 'No runtime.log yet'",
@@ -36,9 +36,6 @@ def _pane_block(profile: dict, fob_dir: Path, indent: str = "        ") -> str:
         f'{i}        }}\n'
         f'{i}        pane name="shell" command="bash" {{\n'
         f'{i}            args "-c" "cd \'{safe_repo}\' && bash \'{welcome}\'"\n'
-        f'{i}        }}\n'
-        f'{i}        pane name="btop" command="bash" {{\n'
-        f'{i}            args "-c" "command -v btop &>/dev/null && btop; exec bash -l"\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
         f'{i}    pane name="claude" command="bash" {{\n'
@@ -123,8 +120,46 @@ def generate_tab_layout(profile: dict, fob_dir: Path) -> Path:
     return tmp
 
 
+def generate_tool_tab_layout(name: str, command: str) -> Path:
+    """Single-pane tab with chrome for session-level tools (btop, gitcomet, etc.)."""
+    layout = (
+        'layout {\n'
+        '    pane size=1 borderless=true {\n'
+        '        plugin location="tab-bar"\n'
+        '    }\n'
+        f'    pane name="{name}" command="bash" {{\n'
+        f'        args "-c" "{command}; exec bash -l"\n'
+        '    }\n'
+        '    pane size=2 borderless=true {\n'
+        '        plugin location="status-bar"\n'
+        '    }\n'
+        '}\n'
+    )
+    tmp = Path(tempfile.gettempdir()) / f"fob-tab-{name}.kdl"
+    tmp.write_text(layout)
+    return tmp
+
+
+def _add_tool_tabs(existing_tabs: set[str]) -> None:
+    """Add btop and gitcomet as session-level tabs if not already open."""
+    tool_tabs = [
+        ("btop",      "command -v btop &>/dev/null && btop"),
+        ("gitcomet",  "command -v gitcomet &>/dev/null && gitcomet"),
+    ]
+    for name, cmd in tool_tabs:
+        if name in existing_tabs:
+            continue
+        layout_path = generate_tool_tab_layout(name, cmd)
+        subprocess.run([
+            "zellij", "--session", FOB_SESSION,
+            "action", "new-tab",
+            "--name", name,
+            "--layout", str(layout_path),
+        ])
+
+
 def _launch_with_extra_tabs(extra_profiles: list[dict], fob_dir: Path, layout_path: Path) -> None:
-    """Start session then add extra tabs via a background wrapper script."""
+    """Start session then add extra profile tabs and tool tabs via a background wrapper script."""
     import shlex
     adds = []
     for profile in extra_profiles:
@@ -132,7 +167,15 @@ def _launch_with_extra_tabs(extra_profiles: list[dict], fob_dir: Path, layout_pa
         adds.append(
             f"zellij --session {FOB_SESSION} action new-tab --name {shlex.quote(profile['name'])} --layout {shlex.quote(str(tab_layout))}"
         )
-    # Write a wrapper that starts zellij then adds tabs once session is ready
+    tool_tabs = [
+        ("btop",     "command -v btop &>/dev/null && btop"),
+        ("gitcomet", "command -v gitcomet &>/dev/null && gitcomet"),
+    ]
+    for name, cmd in tool_tabs:
+        tl = generate_tool_tab_layout(name, cmd)
+        adds.append(
+            f"zellij --session {FOB_SESSION} action new-tab --name {shlex.quote(name)} --layout {shlex.quote(str(tl))}"
+        )
     script = f"""#!/usr/bin/env bash
 zellij --session {FOB_SESSION} --new-session-with-layout {shlex.quote(str(layout_path))} &
 ZPID=$!
@@ -206,6 +249,7 @@ def launch(profiles: list[dict], fob_dir: Path, reset_layout: bool = False) -> N
                 "--name", profile["name"],
                 "--layout", str(layout_path),
             ])
+        _add_tool_tabs(existing_tabs)
         if os.environ.get("ZELLIJ"):
             print(f"  → Tab added")
         else:
@@ -222,11 +266,4 @@ def launch(profiles: list[dict], fob_dir: Path, reset_layout: bool = False) -> N
             layout_path = generate_session_layout(profiles, fob_dir)
             print(f"  → Creating session '{FOB_SESSION}'")
         print(f"  → Layout: {layout_path}")
-        # For multi-profile, extra tabs are added after session starts via a wrapper
-        if len(profiles) > 1 and not (not reset_layout and saved.exists()):
-            _launch_with_extra_tabs(profiles[1:], fob_dir, layout_path)
-        else:
-            os.execvp(
-                "zellij",
-                ["zellij", "--session", FOB_SESSION, "--new-session-with-layout", str(layout_path)],
-            )
+        _launch_with_extra_tabs(profiles[1:], fob_dir, layout_path)

@@ -56,9 +56,10 @@ Layout files:
 - `fob brief --reset-layout` or `fob clear` regenerates from defaults, ignoring saved state
 
 Pane arrangement per tab:
-- **Left 35% stacked**: Git (`gitcomet`), Logs (`tail -f .fob/runtime.log`), Shell (`bash`), btop — focused pane expands, others collapse to title strip
+- **Left 35% stacked**: Git (`lazygit`), Logs (`tail -f .fob/runtime.log`), Shell (`bash`) — focused pane expands, others collapse to title strip
 - **Right 65%**: Claude pane (`claude --continue`)
 - **Floating**: Cheat sheet pane (toggle with Ctrl+p f)
+- **Session tabs** (added once per session): `btop` and `gitcomet` as dedicated tabs
 
 ## Profiles
 
