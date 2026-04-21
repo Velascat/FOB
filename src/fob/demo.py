@@ -192,21 +192,25 @@ def step_preflight(workstation_root: Path | None) -> StepResult:
     else:
         _ok(f"SwitchBoard  : {switchboard_repo}")
 
-    # API keys in config/9router/.env
+    # config/9router/.env — needs JWT_SECRET and INITIAL_PASSWORD
+    # Provider credentials are set via 9router dashboard, NOT here.
     nr_env_path = workstation_root / "config" / "9router" / ".env"
     if not nr_env_path.exists():
         issues.append("9router .env")
-        _fail(f"config/9router/.env missing")
+        _fail("config/9router/.env missing")
         _info(f"  fix: cp {workstation_root}/config/9router/.env.example {nr_env_path}")
+        _info("       then set JWT_SECRET and INITIAL_PASSWORD")
     else:
         nr_env = _load_env_file(nr_env_path)
-        provider_keys = [k for k in nr_env if k.endswith("_API_KEY") and nr_env[k]]
-        if not provider_keys:
-            issues.append("API keys")
-            _fail("No provider API keys set in config/9router/.env")
-            _info("  fix: add at least one of OPENAI_API_KEY or ANTHROPIC_API_KEY")
+        missing_required = [k for k in ("JWT_SECRET", "INITIAL_PASSWORD")
+                            if not nr_env.get(k) or nr_env[k].startswith("change-me")]
+        if missing_required:
+            issues.append("9router secrets")
+            _fail(f"config/9router/.env: {', '.join(missing_required)} not set")
+            _info("  fix: set JWT_SECRET=$(openssl rand -hex 32) and INITIAL_PASSWORD=yourpassword")
         else:
-            _ok(f"API keys     : {', '.join(provider_keys)}")
+            _ok("9router .env  : JWT_SECRET and INITIAL_PASSWORD set")
+            _info("providers are connected via the 9router dashboard after startup")
 
     # Docker
     result = subprocess.run(["which", "docker"], capture_output=True)
@@ -265,6 +269,34 @@ def step_health(switchboard_url: str) -> StepResult:
             all_ok = False
 
     return StepResult("health", all_ok, "all healthy" if all_ok else "one or more services unhealthy")
+
+
+def step_providers(nr_port: str = "20128") -> StepResult:
+    _section("3b · 9router providers")
+
+    # Try to list configured providers via 9router's API
+    code, body = _http_get(f"http://localhost:{nr_port}/api/providers", timeout=5)
+
+    if code == 200:
+        providers = body if isinstance(body, list) else body.get("providers", [])
+        active = [p for p in providers if p.get("enabled") or p.get("active") or p.get("connected")]
+        if active:
+            names = [p.get("name", p.get("id", "?")) for p in active]
+            _ok(f"providers : {', '.join(names)}")
+            return StepResult("providers", True, f"{len(active)} active")
+
+    # No providers configured — guide the user
+    _fail("No providers configured in 9router")
+    print()
+    _info("Connect a free provider at http://localhost:20128 (no API keys needed):")
+    print()
+    print(f"    {_c('Kiro', 'B')}    {_c('→  free Claude Sonnet 4.5  (AWS Builder ID / GitHub OAuth)', 'DIM')}")
+    print(f"    {_c('iFlow', 'B')}   {_c('→  free Deepseek R1, Qwen3  (OAuth)', 'DIM')}")
+    print(f"    {_c('Gemini', 'B')}  {_c('→  free Gemini 2.5 Pro  (Google OAuth, quota-limited)', 'DIM')}")
+    print(f"    {_c('Ollama', 'B')}  {_c('→  free local models  (install: https://ollama.com)', 'DIM')}")
+    print()
+    _info("After connecting a provider, re-run: fob demo --no-start")
+    return StepResult("providers", False, "no providers configured")
 
 
 def step_switchboard_smoke(switchboard_url: str) -> StepResult:
@@ -447,6 +479,14 @@ def run_demo(args: list[str]) -> int:
     health = step_health(switchboard_url)
     result.add(health)
     if not health.passed:
+        print_summary(result)
+        return 1
+
+    # 3b. Provider check
+    nr_port = os.environ.get("PORT_9ROUTER", "20128")
+    prov = step_providers(nr_port)
+    result.add(prov)
+    if not prov.passed:
         print_summary(result)
         return 1
 
