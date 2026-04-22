@@ -22,8 +22,8 @@ FOB is not a neutral bootstrap script or a multiplexer-agnostic tool. Zellij is 
 │  FOB  │  YourRepo  │  ...                         │  ← tab bar
 ├──────────┬──────────────────────────────┬──────────────┤
 │          │                              │              │
-│ lazygit  │      claude --resume         │     logs     │
-│  (28%)   │           (44%)              │    (28%)     │
+│ lazygit  │   claude / codex / aider     │     logs     │
+│  (28%)   │      stacked in center       │    (28%)     │
 ├──────────┤──────────────────────────────┤              │
 │ status   │  shell  (15%)                │              │
 │  (25%)   │                              │              │
@@ -31,7 +31,7 @@ FOB is not a neutral bootstrap script or a multiplexer-agnostic tool. Zellij is 
 │  NORMAL  │  fob  │  ...                               │  ← status bar
 ```
 
-Left 28%: lazygit (top) + ControlPlane status script (bottom 25%). Center 44%: Claude + shell (15%). Right 28%: logs.
+Left 28%: lazygit (top) + ControlPlane status script (bottom 25%). Center 44%: stacked `claude`, `codex`, and `aider`, plus a shell at the bottom (15%). Right 28%: logs.
 
 **Multi repo (`fob multi` or group profile) — single tab:**
 ```
@@ -39,14 +39,14 @@ Left 28%: lazygit (top) + ControlPlane status script (bottom 25%). Center 44%: C
 │  platform  │  ...                                │  ← tab bar (group name, not member list)
 ├──────────┬─────────────────────────┬──────────────────┤
 │ lazygit  │                         │  shell-A ▸       │
-│  repo-A  │                         │  shell-B ▸  (75%)│
-│ lazygit  │    claude --resume      ├──────────────────┤
-│  repo-B  │    (GitHub/)            │  cp-status  (25%)│
+│  repo-A  │  claude / codex / aider │  shell-B ▸  (75%)│
+│ lazygit  │      (GitHub/)          ├──────────────────┤
+│  repo-B  │                         │  cp-status  (25%)│
 │   ...  ▸ │                         │                  │
 └──────────┴─────────────────────────┴──────────────────┘
 ```
 
-Left 28%: stacked lazygits (all repos). Center: Claude only, starts at `~/Documents/GitHub/`. Right 28%: stacked shells (75%) + ControlPlane status (25%).
+Left 28%: stacked lazygits (all repos). Center: stacked `claude`, `codex`, and `aider`, rooted at `~/Documents/GitHub/`. Right 28%: stacked shells (75%) + ControlPlane status (25%).
 
 Tab naming: group profiles use the group name (`platform`); ad-hoc multi-select joins all repo names (`RepoA+RepoB+RepoC`).
 
@@ -197,6 +197,16 @@ FOB is a persistent system. Every persistent system needs a clear escape hatch.
 | `fob loadout` | Install and configure dev tools |
 | `fob cheat` | Open keybinding reference |
 | `fob install` | Symlink `fob` to `~/.local/bin` |
+
+**Platform validation:**
+
+| Command | Description |
+|---------|-------------|
+| `fob demo` | Golden-path platform demo: preflight, stack, providers, SwitchBoard, ControlPlane |
+| `fob demo --no-start` | Run the same validation without starting the stack |
+| `fob demo --json` | Machine-readable demo summary |
+| `fob providers` | Open the provider dashboard and show free provider options |
+| `fob providers --wait` | Poll until a provider is connected |
 
 ## Typical Session
 

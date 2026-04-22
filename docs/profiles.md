@@ -135,6 +135,11 @@ claude:
 
 `fob save [profile]` captures the current Zellij tab layout — pane sizes, commands, everything — and saves it to `config/profiles/<name>.kdl` (gitignored). The next `fob brief` uses it automatically instead of regenerating from YAML.
 
+The default generated layouts now assume:
+
+- single-repo tabs: stacked `claude`, `codex`, and `aider` in the center column
+- multi-repo tabs: the same stacked chat/tool panes, rooted at `~/Documents/GitHub/`
+
 ```bash
 fob save                      # save current tab for the auto-detected profile
 fob save myrepo               # save the tab named "myrepo"

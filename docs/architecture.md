@@ -7,6 +7,8 @@ fob (shell wrapper)
 └── src/fob/cli.py              ← main dispatcher + repo discovery + profile picker
     ├── profile_loader.py       ← YAML profile loading + validation
     ├── launcher.py             ← Zellij session creation / tab management
+    ├── demo.py                 ← end-to-end platform validation flow
+    ├── providers.py            ← provider dashboard helper + free-provider guide
     ├── layout.py               ← layout persistence (save/load/show/reset)
     ├── tab_capture.py          ← live Zellij layout capture (dump-layout + KDL extraction)
     ├── session_group.py        ← session group persistence (save/load last group for fob restore)
@@ -198,6 +200,17 @@ These layers are independent. Resetting one does not affect the others. `fob res
 `fob status` — shows session (running/stopped, attached/detached), layout (saved/none, metadata), branch, profile, and `.fob/` file presence. Active mission snippet is shown if the file exists.
 
 `fob map` — structured full-state snapshot. Includes repo info, session state, layout metadata, and mission file presence. `--json` flag emits machine-readable JSON for tooling/piping.
+
+## Platform Validation Commands
+
+FOB also owns operator-facing validation commands for the shared platform:
+
+- `fob demo` — the golden-path vertical slice: preflight, stack health, provider connectivity, SwitchBoard request, and ControlPlane-style request
+- `fob demo --no-start` — same validation but assumes the stack is already up
+- `fob providers` — opens the provider dashboard and prints free-provider options
+- `fob providers --wait` — polls until a provider is connected and then points the operator back to the demo flow
+
+These are operator UX commands. They do not move infrastructure ownership out of WorkStation.
 
 ## Dev Toolchain
 
