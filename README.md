@@ -202,11 +202,11 @@ FOB is a persistent system. Every persistent system needs a clear escape hatch.
 
 | Command | Description |
 |---------|-------------|
-| `fob demo` | Golden-path platform demo: preflight, stack, providers, SwitchBoard, ControlPlane |
+| `fob demo` | Validate stack, selector route, and ControlPlane handoff |
 | `fob demo --no-start` | Run the same validation without starting the stack |
 | `fob demo --json` | Machine-readable demo summary |
-| `fob providers` | Open the provider dashboard and show free provider options |
-| `fob providers --wait` | Poll until a provider is connected |
+| `fob providers` | Show selector and lane readiness |
+| `fob providers --wait` | Poll until SwitchBoard is healthy |
 
 ## Typical Session
 

@@ -205,10 +205,10 @@ These layers are independent. Resetting one does not affect the others. `fob res
 
 FOB also owns operator-facing validation commands for the shared platform:
 
-- `fob demo` — the golden-path vertical slice: preflight, stack health, provider connectivity, SwitchBoard request, and ControlPlane-style request
+- `fob demo` — the golden-path architecture check: preflight, stack health, SwitchBoard route selection, and ControlPlane handoff
 - `fob demo --no-start` — same validation but assumes the stack is already up
-- `fob providers` — opens the provider dashboard and prints free-provider options
-- `fob providers --wait` — polls until a provider is connected and then points the operator back to the demo flow
+- `fob providers` — reports selector and lane readiness
+- `fob providers --wait` — polls until the selector is healthy and then points the operator back to the demo flow
 
 These are operator UX commands. They do not move infrastructure ownership out of WorkStation.
 

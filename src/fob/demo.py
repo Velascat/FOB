@@ -1,29 +1,15 @@
-"""fob demo — golden-path vertical-slice demo command.
-
-Proves the full platform is operational:
-  1. Preflight    — repos and config exist, required binaries available
-  2. Stack        — WorkStation stack is healthy or started
-  3. Health       — SwitchBoard and 9router respond on /health
-  4. Providers    — at least one provider connected in 9router
-  5. SwitchBoard  — sends a deterministic request, shows routing decision
-  6. ControlPlane — sends a request as ControlPlane would (tenant headers),
-                    proves the shared routing path works for autonomous traffic
-  7. Summary      — per-step status, artifact locations, exit code
-"""
+"""fob demo — validate the selector and planning handoff architecture."""
 from __future__ import annotations
 
 import json
 import os
 import subprocess
-import sys
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-
-# ── colour helpers ────────────────────────────────────────────────────────────
 
 _C = {
     "R": "\033[0m", "B": "\033[1m", "DIM": "\033[2m",
@@ -53,34 +39,24 @@ def _section(title: str) -> None:
     print(_c(f"── {title} ", "B", "CYN") + _c("─" * max(0, 48 - len(title)), "DIM"))
 
 
-# ── result tracking ───────────────────────────────────────────────────────────
-
 @dataclass
 class StepResult:
     name: str
     passed: bool
     detail: str = ""
-    artifact: str = ""
 
 
 @dataclass
 class DemoResult:
     steps: list[StepResult] = field(default_factory=list)
-    started_at: float = field(default_factory=time.time)
 
     def add(self, step: StepResult) -> None:
         self.steps.append(step)
 
     @property
     def passed(self) -> bool:
-        return all(s.passed for s in self.steps)
+        return all(step.passed for step in self.steps)
 
-    @property
-    def failed_step(self) -> StepResult | None:
-        return next((s for s in self.steps if not s.passed), None)
-
-
-# ── HTTP helpers (no external deps beyond stdlib + optional httpx) ────────────
 
 def _http_get(url: str, timeout: float = 5.0) -> tuple[int, Any]:
     try:
@@ -90,21 +66,14 @@ def _http_get(url: str, timeout: float = 5.0) -> tuple[int, Any]:
             return resp.status, body
     except urllib.error.HTTPError as exc:
         return exc.code, {}
-    except Exception:
-        return 0, {}
+    except Exception as exc:
+        return 0, {"error": str(exc)}
 
 
-def _http_post(
-    url: str,
-    payload: dict,
-    headers: dict[str, str] | None = None,
-    timeout: float = 30.0,
-) -> tuple[int, Any]:
+def _http_post(url: str, payload: dict[str, Any], timeout: float = 10.0) -> tuple[int, Any]:
     data = json.dumps(payload).encode()
     req = urllib.request.Request(url, data=data, method="POST")
     req.add_header("Content-Type", "application/json")
-    for k, v in (headers or {}).items():
-        req.add_header(k, v)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = json.loads(resp.read().decode())
@@ -120,413 +89,187 @@ def _http_post(
         return 0, {"error": str(exc)}
 
 
-# ── platform discovery ────────────────────────────────────────────────────────
+def _repo_root(name: str) -> Path:
+    return Path.home() / "Documents" / "GitHub" / name
+
 
 def _find_workstation() -> Path | None:
-    candidates = [
-        Path(__file__).resolve().parents[4] / "WorkStation",
-        Path.home() / "Documents" / "GitHub" / "WorkStation",
-    ]
-    for c in candidates:
-        if (c / "scripts" / "ensure-up.sh").exists():
-            return c
-    return None
-
-
-def _find_switchboard_url() -> str:
-    port = os.environ.get("PORT_SWITCHBOARD", "20401")
-    return f"http://localhost:{port}"
-
-
-# ── demo steps ────────────────────────────────────────────────────────────────
-
-def _load_env_file(path: Path) -> dict[str, str]:
-    """Parse a simple KEY=value .env file, ignoring comments and blanks."""
-    result: dict[str, str] = {}
-    if not path.exists():
-        return result
-    for line in path.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if "=" in line:
-            k, _, v = line.partition("=")
-            result[k.strip()] = v.strip().strip('"').strip("'")
-    return result
+    repo = _repo_root("WorkStation")
+    return repo if (repo / "scripts" / "ensure-up.sh").exists() else None
 
 
 def step_preflight(workstation_root: Path | None) -> StepResult:
     _section("1 · Preflight")
-
-    issues: list[str] = []
-
     if workstation_root is None:
         _fail("WorkStation repo not found")
-        _info("expected at ~/Documents/GitHub/WorkStation")
         return StepResult("preflight", False, "WorkStation not found")
 
-    _ok(f"WorkStation : {workstation_root}")
+    expected = {
+        "WorkStation": workstation_root,
+        "SwitchBoard": _repo_root("SwitchBoard"),
+        "ControlPlane": _repo_root("ControlPlane"),
+    }
+    missing: list[str] = []
+    for name, path in expected.items():
+        if path.exists():
+            _ok(f"{name}: {path}")
+        else:
+            _fail(f"{name} missing at {path}")
+            missing.append(name)
 
-    # .env
     env_file = workstation_root / ".env"
-    if not env_file.exists():
-        issues.append(".env")
-        _fail(".env missing")
-        _info(f"  fix: cp {workstation_root}/.env.example {workstation_root}/.env")
-    else:
+    if env_file.exists():
         _ok(".env present")
-
-    # 9router source repo (needed as Docker build context)
-    nine_router_repo = workstation_root.parent / "9router"
-    if not (nine_router_repo / "package.json").exists():
-        issues.append("9router repo")
-        _fail(f"9router source not found at {nine_router_repo}")
-        _info("  fix: git clone https://github.com/decolua/9router " + str(nine_router_repo))
     else:
-        _ok(f"9router repo : {nine_router_repo}")
+        _fail(".env missing")
+        missing.append(".env")
 
-    # SwitchBoard source repo (needed as Docker build context)
-    switchboard_repo = workstation_root.parent / "SwitchBoard"
-    if not (switchboard_repo / "pyproject.toml").exists():
-        issues.append("SwitchBoard repo")
-        _fail(f"SwitchBoard source not found at {switchboard_repo}")
-        _info("  fix: git clone https://github.com/Velascat/SwitchBoard " + str(switchboard_repo))
+    endpoints = workstation_root / "config" / "workstation" / "endpoints.yaml"
+    if endpoints.exists():
+        _ok("workstation endpoints config present")
     else:
-        _ok(f"SwitchBoard  : {switchboard_repo}")
+        _fail("config/workstation/endpoints.yaml missing")
+        missing.append("endpoints.yaml")
 
-    # config/9router/.env — needs JWT_SECRET and INITIAL_PASSWORD
-    # Provider credentials are set via 9router dashboard, NOT here.
-    nr_env_path = workstation_root / "config" / "9router" / ".env"
-    if not nr_env_path.exists():
-        issues.append("9router .env")
-        _fail("config/9router/.env missing")
-        _info(f"  fix: cp {workstation_root}/config/9router/.env.example {nr_env_path}")
-        _info("       then set JWT_SECRET and INITIAL_PASSWORD")
-    else:
-        nr_env = _load_env_file(nr_env_path)
-        missing_required = [k for k in ("JWT_SECRET", "INITIAL_PASSWORD")
-                            if not nr_env.get(k) or nr_env[k].startswith("change-me")]
-        if missing_required:
-            issues.append("9router secrets")
-            _fail(f"config/9router/.env: {', '.join(missing_required)} not set")
-            _info("  fix: set JWT_SECRET=$(openssl rand -hex 32) and INITIAL_PASSWORD=yourpassword")
-        else:
-            _ok("9router .env  : JWT_SECRET and INITIAL_PASSWORD set")
-            _info("providers are connected via the 9router dashboard after startup")
-
-    # Docker
-    result = subprocess.run(["which", "docker"], capture_output=True)
-    if result.returncode != 0:
-        issues.append("docker")
-        _fail("docker not found — install Docker")
-    else:
-        # Check daemon is running
-        ping = subprocess.run(["docker", "info"], capture_output=True)
-        if ping.returncode != 0:
-            issues.append("docker daemon")
-            _fail("Docker daemon not running — start Docker Desktop or dockerd")
-        else:
-            _ok("Docker daemon running")
-
-    if issues:
-        print()
-        _fail(f"Preflight failed: {', '.join(issues)}")
-        return StepResult("preflight", False, f"missing: {', '.join(issues)}")
-    return StepResult("preflight", True, "all checks passed")
+    return StepResult("preflight", not missing, ", ".join(missing) if missing else "all checks passed")
 
 
 def step_stack(workstation_root: Path) -> StepResult:
     _section("2 · Stack")
-
     script = workstation_root / "scripts" / "ensure-up.sh"
-    if not script.exists():
-        _fail(f"ensure-up.sh not found at {script}")
-        return StepResult("stack", False, "ensure-up.sh missing")
-
-    result = subprocess.run(
-        ["bash", str(script)],
-        capture_output=False,
-    )
+    result = subprocess.run(["bash", str(script)], capture_output=False)
     if result.returncode == 0:
+        _ok("WorkStation stack ready")
         return StepResult("stack", True, "healthy")
+    _fail(f"ensure-up.sh exited {result.returncode}")
     return StepResult("stack", False, f"ensure-up.sh exited {result.returncode}")
 
 
-def step_health(switchboard_url: str) -> StepResult:
+def step_health() -> StepResult:
     _section("3 · Health")
-
-    sb_port = switchboard_url.rsplit(":", 1)[-1]
-    nr_port = os.environ.get("PORT_9ROUTER", "20128")
-
-    all_ok = True
-    for name, url in [
-        ("SwitchBoard", f"http://localhost:{sb_port}/health"),
-        ("9router    ", f"http://localhost:{nr_port}/health"),
-    ]:
-        code, body = _http_get(url, timeout=5)
-        if code == 200:
-            _ok(f"{name}  ({url})")
-        else:
-            _fail(f"{name}  ({url})  → HTTP {code or 'no response'}")
-            all_ok = False
-
-    return StepResult("health", all_ok, "all healthy" if all_ok else "one or more services unhealthy")
-
-
-def step_providers(nr_port: str = "20128") -> StepResult:
-    _section("4 · Providers")
-
-    code, body = _http_get(f"http://localhost:{nr_port}/api/providers", timeout=5)
-
+    port = os.environ.get("PORT_SWITCHBOARD", "20401")
+    code, body = _http_get(f"http://localhost:{port}/health")
     if code == 200:
-        providers = body if isinstance(body, list) else body.get("providers", [])
-        active = [p for p in providers if p.get("enabled") or p.get("active") or p.get("connected")]
-        if active:
-            names = [p.get("name", p.get("id", "?")) for p in active]
-            _ok(f"providers : {', '.join(names)}")
-            return StepResult("providers", True, f"{len(active)} active")
+        _ok(f"SwitchBoard health: {body.get('status', 'ok')}")
+        return StepResult("health", True, body.get("status", "ok"))
+    _fail(f"SwitchBoard health failed: HTTP {code}")
+    return StepResult("health", False, f"HTTP {code}")
 
-    # No providers — show options and tell user how to fix
-    _fail("No providers connected to 9router")
-    print()
-    _info("Connect a free provider (no API key required):")
-    print()
-    rows = [
-        ("Kiro",   "Claude Sonnet 4.5",       "GitHub OAuth",  "recommended"),
-        ("iFlow",  "Deepseek R1, Qwen3",      "OAuth",         ""),
-        ("Gemini", "Gemini 2.5 Pro",          "Google OAuth",  "quota-limited"),
-        ("Ollama", "local models",            "no account",    "CPU-only is slow"),
+
+def step_route() -> StepResult:
+    _section("4 · Route Selection")
+    port = os.environ.get("PORT_SWITCHBOARD", "20401")
+    payload = {
+        "task_id": "fob-demo-route",
+        "project_id": "fob-demo",
+        "task_type": "documentation",
+        "execution_mode": "goal",
+        "goal_text": "Refresh the architecture summary wording",
+        "target": {
+            "repo_key": "docs",
+            "clone_url": "https://example.invalid/docs.git",
+            "base_branch": "main",
+            "allowed_paths": [],
+        },
+        "priority": "normal",
+        "risk_level": "low",
+        "constraints": {
+            "allowed_paths": [],
+            "require_clean_validation": True,
+        },
+        "validation_profile": {
+            "profile_name": "default",
+            "commands": [],
+        },
+        "branch_policy": {
+            "push_on_success": True,
+            "open_pr": False,
+        },
+        "labels": [],
+    }
+    code, body = _http_post(f"http://localhost:{port}/route", payload)
+    if code == 200:
+        _ok(f"lane={body['selected_lane']} backend={body['selected_backend']}")
+        return StepResult("route", True, f"{body['selected_lane']}/{body['selected_backend']}")
+    _fail(f"SwitchBoard route failed: HTTP {code}")
+    return StepResult("route", False, f"HTTP {code}")
+
+
+def step_controlplane_handoff() -> StepResult:
+    _section("5 · ControlPlane Handoff")
+    repo = _repo_root("ControlPlane")
+    cmd = [
+        "python",
+        "-m",
+        "control_plane.entrypoints.worker.main",
+        "--goal",
+        "Refresh architecture wording",
+        "--task-type",
+        "documentation",
+        "--repo-key",
+        "docs",
+        "--clone-url",
+        "https://example.invalid/docs.git",
+        "--project-id",
+        "fob-demo",
+        "--task-id",
+        "fob-demo-worker",
     ]
-    for name, models, auth, note in rows:
-        note_str = f"  {_c(note, 'DIM')}" if note else ""
-        print(f"    {_c(name, 'B'):<12}  {_c(models, 'DIM'):<28}  {auth}{note_str}")
-    print()
-    _info("Run:  fob providers  to open the dashboard and connect a provider")
-    _info("Then: fob demo --no-start  to continue validation")
-    return StepResult("providers", False, "run: fob providers")
-
-
-def step_switchboard_smoke(switchboard_url: str) -> StepResult:
-    _section("5 · SwitchBoard routing proof")
-
-    import uuid
-    rid = uuid.uuid4().hex[:12]
-    payload = {
-        "model": "fast",
-        "messages": [{"role": "user", "content": "Reply with a single word: ready"}],
-    }
-    headers = {
-        "X-Request-ID": rid,
-        "X-SwitchBoard-Tenant-ID": "fob-demo",
-        "Authorization": "Bearer sk-demo",
-    }
-
-    _info(f"request_id : {rid}")
-    _info(f"model hint : fast")
-
-    code, body = _http_post(
-        f"{switchboard_url}/v1/chat/completions",
-        payload,
-        headers=headers,
-        timeout=30,
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        [
+            str(repo / "src"),
+            str(repo.parent / "SwitchBoard" / "src"),
+        ]
     )
-
-    if code != 200:
-        _fail(f"HTTP {code}  —  {json.dumps(body)[:120]}")
-        return StepResult("switchboard", False, f"HTTP {code}")
-
-    try:
-        reply = body["choices"][0]["message"]["content"]
-        _ok(f"response   : {reply!r}")
-    except (KeyError, IndexError):
-        _fail("unexpected response shape")
-        return StepResult("switchboard", False, "malformed response")
-
-    # Fetch the routing decision
-    time.sleep(0.2)
-    dcode, decisions = _http_get(
-        f"{switchboard_url}/admin/decisions/recent?n=1", timeout=5
-    )
-    decision_detail = ""
-    if dcode == 200 and decisions:
-        d = decisions[0]
-        profile = d.get("profile_name", "?")
-        model   = d.get("downstream_model", "?")
-        rule    = d.get("rule_name", "?")
-        lat     = d.get("latency_ms")
-        lat_str = f"{lat:.0f} ms" if lat is not None else "?"
-        _ok(f"profile    : {profile}  →  {model}")
-        _info(f"rule       : {rule}")
-        _info(f"latency    : {lat_str}")
-        decision_detail = f"profile={profile} model={model} rule={rule}"
-
-    return StepResult("switchboard", True, decision_detail)
+    result = subprocess.run(cmd, cwd=repo, env=env, capture_output=True, text=True)
+    if result.returncode != 0:
+        _fail("ControlPlane worker handoff failed")
+        _info(result.stderr.strip() or result.stdout.strip())
+        return StepResult("controlplane", False, f"exit {result.returncode}")
+    body = json.loads(result.stdout)
+    summary = body["run_summary"]
+    _ok(summary)
+    return StepResult("controlplane", True, summary)
 
 
-def step_controlplane_proof(switchboard_url: str) -> StepResult:
-    _section("6 · ControlPlane routing proof")
-    _info("Sending a request as ControlPlane would (X-SwitchBoard-Tenant-ID: control-plane)")
-
-    import uuid
-    rid = uuid.uuid4().hex[:12]
-    payload = {
-        "model": "capable",
-        "messages": [
-            {
-                "role": "user",
-                "content": (
-                    "You are a planning assistant. "
-                    "Reply with a single word: acknowledged"
-                ),
-            }
-        ],
-    }
-    headers = {
-        "X-Request-ID": rid,
-        "X-SwitchBoard-Tenant-ID": "control-plane",
-        "X-SwitchBoard-Profile": "capable",
-        "Authorization": "Bearer sk-demo",
-    }
-
-    _info(f"request_id : {rid}")
-    _info(f"profile    : capable (ControlPlane default)")
-
-    code, body = _http_post(
-        f"{switchboard_url}/v1/chat/completions",
-        payload,
-        headers=headers,
-        timeout=30,
-    )
-
-    if code != 200:
-        _fail(f"HTTP {code}  —  {json.dumps(body)[:120]}")
-        return StepResult("controlplane", False, f"HTTP {code}")
-
-    try:
-        reply = body["choices"][0]["message"]["content"]
-        _ok(f"response   : {reply!r}")
-    except (KeyError, IndexError):
-        _fail("unexpected response shape")
-        return StepResult("controlplane", False, "malformed response")
-
-    time.sleep(0.2)
-    dcode, decisions = _http_get(
-        f"{switchboard_url}/admin/decisions/recent?n=1", timeout=5
-    )
-    if dcode == 200 and decisions:
-        d = decisions[0]
-        tenant = d.get("tenant_id", "?")
-        profile = d.get("profile_name", "?")
-        _ok(f"tenant     : {tenant}  profile={profile}")
-
-    return StepResult("controlplane", True, "ControlPlane traffic routed successfully")
-
-
-# ── summary ───────────────────────────────────────────────────────────────────
-
-def print_summary(result: DemoResult) -> None:
-    elapsed = time.time() - result.started_at
+def _print_summary(result: DemoResult) -> None:
     _section("Summary")
     for step in result.steps:
-        icon = _c("✓", "GRN") if step.passed else _c("✗", "RED")
-        detail = f"  {_c(step.detail, 'DIM')}" if step.detail else ""
-        print(f"  {icon}  {step.name:<16}{detail}")
-    print()
-    print(f"  {_c('elapsed', 'DIM')} : {elapsed:.1f}s")
+        marker = _c("PASS", "GRN") if step.passed else _c("FAIL", "RED")
+        print(f"  {marker} {step.name:<14} {step.detail}")
     print()
     if result.passed:
-        print(_c("  DEMO PASSED — platform is operational.", "GRN", "B"))
+        _ok("Architecture validation passed")
     else:
-        failed = result.failed_step
-        if failed:
-            print(_c(f"  DEMO FAILED at step: {failed.name}", "RED", "B"))
-            if failed.name == "providers":
-                print()
-                print(_c("  Connect a free provider, then re-run:", "DIM"))
-                print(_c("    fob providers          open dashboard + provider table", "DIM"))
-                print(_c("    fob providers --wait   same, poll until connected", "DIM"))
-                print(_c("    fob demo --no-start    resume validation", "DIM"))
-            elif failed.detail:
-                print(_c(f"  {failed.detail}", "DIM"))
-        if not failed or failed.name not in ("providers",):
-            print()
-            print(_c("  Logs / admin:", "DIM"))
-            print(_c("    bash scripts/health.sh         (WorkStation)", "DIM"))
-            print(_c("    curl localhost:20401/admin/decisions/recent?n=5", "DIM"))
-    print()
+        _fail("Architecture validation failed")
 
-
-# ── entry point ───────────────────────────────────────────────────────────────
 
 def run_demo(args: list[str]) -> int:
-    verbose    = "--verbose" in args or "-v" in args
-    no_start   = "--no-start" in args
-    as_json    = "--json" in args
-
-    print(_c("\n  fob demo", "B", "CYN") + _c(" — platform vertical slice", "DIM"))
-
+    no_start = "--no-start" in args
+    print(_c("\n  fob demo", "B", "CYN") + _c(" — selector and planning handoff validation", "DIM"))
     workstation_root = _find_workstation()
-    switchboard_url  = _find_switchboard_url()
-
     result = DemoResult()
 
-    # 1. Preflight
-    pre = step_preflight(workstation_root)
-    result.add(pre)
-    if not pre.passed:
-        print_summary(result)
+    preflight = step_preflight(workstation_root)
+    result.add(preflight)
+    if not preflight.passed or workstation_root is None:
+        _print_summary(result)
         return 1
 
-    # 2. Stack
-    if no_start:
-        _section("2 · Stack")
-        _info("--no-start: skipping stack launch")
-        result.add(StepResult("stack", True, "skipped (--no-start)"))
-    else:
-        stack = step_stack(workstation_root)  # type: ignore[arg-type]
+    if not no_start:
+        stack = step_stack(workstation_root)
         result.add(stack)
         if not stack.passed:
-            print_summary(result)
+            _print_summary(result)
             return 1
 
-    # 3. Health
-    health = step_health(switchboard_url)
-    result.add(health)
-    if not health.passed:
-        print_summary(result)
-        return 1
+    time.sleep(1)
+    for step in (step_health(), step_route(), step_controlplane_handoff()):
+        result.add(step)
+        if not step.passed:
+            _print_summary(result)
+            return 1
 
-    # 4. Providers
-    nr_port = os.environ.get("PORT_9ROUTER", "20128")
-    prov = step_providers(nr_port)
-    result.add(prov)
-    if not prov.passed:
-        print_summary(result)
-        return 1
-
-    # 5. SwitchBoard smoke
-    sb = step_switchboard_smoke(switchboard_url)
-    result.add(sb)
-    if not sb.passed:
-        print_summary(result)
-        return 1
-
-    # 6. ControlPlane proof
-    cp = step_controlplane_proof(switchboard_url)
-    result.add(cp)
-
-    if as_json:
-        summary = {
-            "passed": result.passed,
-            "elapsed_s": round(time.time() - result.started_at, 1),
-            "switchboard_url": switchboard_url,
-            "steps": [
-                {"name": s.name, "passed": s.passed, "detail": s.detail}
-                for s in result.steps
-            ],
-        }
-        print(json.dumps(summary, indent=2))
-        return 0 if result.passed else 1
-
-    print_summary(result)
-    return 0 if result.passed else 1
+    _print_summary(result)
+    return 0
