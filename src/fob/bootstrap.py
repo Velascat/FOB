@@ -173,16 +173,45 @@ def get_codex_command(
     codex_bin = codex_cfg.get("bin", "codex")
 
     safe_bin = codex_bin.replace("'", "'\\''")
-    script = (
-        "#!/usr/bin/env bash\n"
-        f"if ! command -v '{safe_bin}' &>/dev/null; then\n"
-        "  echo 'codex CLI not found.'\n"
-        "  echo 'Install: npm install -g @openai/codex'\n"
-        "  exec bash -l\n"
-        "fi\n"
-        f"'{safe_bin}'\n"
-        "exec bash -l\n"
-    )
+
+    if fob_dir is None:
+        session_file = None
+    else:
+        session_file = fob_dir / "config" / "profiles" / f"{key}.codex-session"
+
+    if session_file is not None:
+        sf = str(session_file).replace("'", "'\\''")
+        script = (
+            "#!/usr/bin/env bash\n"
+            f"if ! command -v '{safe_bin}' &>/dev/null; then\n"
+            "  echo 'codex CLI not found.'\n"
+            "  echo 'Install: npm install -g @openai/codex'\n"
+            "  exec bash -l\n"
+            "fi\n"
+            f"SESSION_FILE='{sf}'\n"
+            "if [ -f \"$SESSION_FILE\" ]; then\n"
+            f"    '{safe_bin}' resume \"$(cat \"$SESSION_FILE\")\" || '{safe_bin}'\n"
+            "else\n"
+            f"    '{safe_bin}'\n"
+            "fi\n"
+            # Extract UUID from newest session file after exit
+            "newest=$(find ~/.codex/sessions -name 'rollout-*.jsonl' 2>/dev/null"
+            " | sort -r | head -1)\n"
+            "[ -n \"$newest\" ] && basename \"$newest\" .jsonl"
+            " | grep -oE '[0-9a-f-]{36}$' > \"$SESSION_FILE\" || true\n"
+            "exec bash -l\n"
+        )
+    else:
+        script = (
+            "#!/usr/bin/env bash\n"
+            f"if ! command -v '{safe_bin}' &>/dev/null; then\n"
+            "  echo 'codex CLI not found.'\n"
+            "  echo 'Install: npm install -g @openai/codex'\n"
+            "  exec bash -l\n"
+            "fi\n"
+            f"'{safe_bin}'\n"
+            "exec bash -l\n"
+        )
 
     script_path = Path(tempfile.gettempdir()) / f"fob-codex-{key}.sh"
     script_path.write_text(script)
