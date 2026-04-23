@@ -13,6 +13,7 @@ config/profiles/*.yaml
 !config/profiles/switchboard.yaml
 !config/profiles/workstation.yaml
 
-# Saved tab layouts and Claude session IDs (captured from live sessions — always private)
+# Saved tab layouts and session IDs (captured from live sessions — always private)
 config/profiles/*.kdl
 config/profiles/*.session
+config/profiles/*.codex-session
