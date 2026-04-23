@@ -23,9 +23,9 @@ def _c(text: str, *keys: str) -> str:
 
 # ── single-repo pane block ────────────────────────────────────────────────────
 #
-#  Left  28%: lazygit (top) + control-plane status (bottom, fixed)
-#  Center   : stacked chats — claude / codex / aider — + shell (15% bottom)
-#  Right 28%: logs
+#  Left  28%: lazygit
+#  Center   : stacked chats — claude / codex / aider
+#  Right 28%: shell (top) + control-plane status (bottom, 25%) — mirrors multi layout
 
 def _single_pane_block(
     profile: dict,
@@ -36,9 +36,6 @@ def _single_pane_block(
     repo       = profile["repo_root"]
     panes_cfg  = profile.get("panes", {})
     git_cmd    = panes_cfg.get("git",  {}).get("command", "lazygit")
-    logs_cmd   = panes_cfg.get("logs", {}).get(
-        "command", "tail -f .fob/runtime.log 2>/dev/null || echo 'No runtime.log yet'",
-    )
     safe_repo  = repo.replace("'", "'\\''")
     safe_cwd   = str(claude_cwd).replace("'", "'\\''") if claude_cwd else safe_repo
     cp_status  = str(_CP_STATUS).replace("'", "'\\''")
@@ -52,17 +49,12 @@ def _single_pane_block(
 
     return (
         f'{i}pane split_direction="vertical" {{\n'
-        # Left column: lazygit + control-plane status
-        f'{i}    pane size="28%" split_direction="horizontal" {{\n'
-        f'{i}        pane name="git" command="bash" {{\n'
-        f'{i}            args "-c" "cd \'{safe_repo}\' && {git_cmd}; exec bash -l"\n'
-        f'{i}        }}\n'
-        f'{i}        pane size="25%" name="status" command="bash" {{\n'
-        f'{i}            args "-c" "bash \'{cp_status}\' status{status_arg}"\n'
-        f'{i}        }}\n'
+        # Left column: lazygit only
+        f'{i}    pane size="28%" name="git" command="bash" {{\n'
+        f'{i}        args "-c" "cd \'{safe_repo}\' && {git_cmd}; exec bash -l"\n'
         f'{i}    }}\n'
-        # Center: stacked chats + shell
-        f'{i}    pane split_direction="horizontal" {{\n'
+        # Center: stacked chats only
+        f'{i}    pane {{\n'
         f'{i}        pane stacked=true {{\n'
         f'{i}            pane name="claude" command="bash" {{\n'
         f'{i}                args "-c" "cd \'{safe_cwd}\' && {claude_cmd}"\n'
@@ -74,13 +66,15 @@ def _single_pane_block(
         f'{i}                args "-c" "cd \'{safe_cwd}\' && {aider_cmd}"\n'
         f'{i}            }}\n'
         f'{i}        }}\n'
-        f'{i}        pane size="15%" name="shell" command="bash" {{\n'
-        f'{i}            args "-c" "cd \'{safe_cwd}\' && exec bash -l"\n'
-        f'{i}        }}\n'
         f'{i}    }}\n'
-        # Right column: logs
-        f'{i}    pane size="28%" name="logs" command="bash" {{\n'
-        f'{i}        args "-c" "cd \'{safe_repo}\' && {logs_cmd}; exec bash -l"\n'
+        # Right column: shell (top) + status (bottom) — same ratio as multi layout
+        f'{i}    pane size="28%" split_direction="horizontal" {{\n'
+        f'{i}        pane name="shell" command="bash" {{\n'
+        f'{i}            args "-c" "cd \'{safe_repo}\' && while true; do bash -l; done"\n'
+        f'{i}        }}\n'
+        f'{i}        pane size="25%" name="status" command="bash" {{\n'
+        f'{i}            args "-c" "bash \'{cp_status}\' status{status_arg}"\n'
+        f'{i}        }}\n'
         f'{i}    }}\n'
         f'{i}}}'
     )

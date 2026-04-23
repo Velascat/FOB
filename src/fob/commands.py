@@ -379,6 +379,26 @@ def cmd_loadout(args: list[str], scripts_dir: Path) -> None:
     os.execvp("bash", ["bash", str(script)] + args)
 
 
+# ── update ────────────────────────────────────────────────────────────────────
+
+def cmd_update(args: list[str]) -> None:
+    """Update claude, codex, and aider CLIs."""
+    from fob.bootstrap import update_clis, _CLI_UPDATES
+    print()
+    print(c("  UPDATING CLIs", "B", "CYN"))
+    print(hr())
+    results = update_clis(verbose=False)
+    for name, cmd in _CLI_UPDATES:
+        status = results.get(name, "?")
+        if status == "ok":
+            print(f"  {c('✓', 'GRN')} {c(name, 'B'):<12}  {c('updated', 'GRN')}")
+        elif status.startswith("skipped"):
+            print(f"  {c('–', 'DIM')} {c(name, 'DIM'):<12}  {c(status, 'DIM')}")
+        else:
+            print(f"  {c('✗', 'YLW')} {c(name, 'B'):<12}  {c(status, 'YLW')}")
+    print()
+
+
 # ── reset ────────────────────────────────────────────────────────────────────
 
 def cmd_reset(args: list[str], default_profile: dict | None, fob_dir: Path) -> None:

@@ -1,5 +1,7 @@
 """Generate Claude briefing from repo-local .fob/ state files."""
 from __future__ import annotations
+import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -146,6 +148,7 @@ def get_claude_command(
         "fi\n"
         "newest=$(ls -t \"$PROJECT_DIR\"/*.jsonl 2>/dev/null | head -1)\n"
         "[ -n \"$newest\" ] && basename \"$newest\" .jsonl > \"$SESSION_FILE\" || true\n"
+        "exec bash -l\n"
     )
 
     script_path = Path(tempfile.gettempdir()) / f"fob-claude-{key}.sh"
@@ -177,7 +180,8 @@ def get_codex_command(
         "  echo 'Install: npm install -g @openai/codex'\n"
         "  exec bash -l\n"
         "fi\n"
-        f"exec '{safe_bin}'\n"
+        f"'{safe_bin}'\n"
+        "exec bash -l\n"
     )
 
     script_path = Path(tempfile.gettempdir()) / f"fob-codex-{key}.sh"
@@ -268,3 +272,48 @@ Do not edit `.fob/.briefing` directly — it is overwritten at each launch.
             claude_md.write_text(existing.rstrip() + "\n\n" + block + "\n")
     else:
         claude_md.write_text(block + "\n")
+
+
+# ── CLI update helpers ────────────────────────────────────────────────────────
+
+_UPDATE_LOG = Path("/tmp/fob-cli-update.log")
+
+_CLI_UPDATES: list[tuple[str, list[str]]] = [
+    ("claude",  ["claude", "update"]),
+    ("codex",   ["npm", "install", "-g", "@openai/codex"]),
+    ("aider",   ["pipx", "upgrade", "aider-chat"]),
+]
+
+
+def update_clis(*, verbose: bool = False) -> dict[str, str]:
+    """Run update commands for claude, codex, and aider. Returns {name: status}."""
+    results: dict[str, str] = {}
+    for name, cmd in _CLI_UPDATES:
+        bin_name = cmd[0]
+        if not shutil.which(bin_name):
+            results[name] = "skipped (not found)"
+            continue
+        try:
+            r = subprocess.run(cmd, capture_output=not verbose, text=True, timeout=120)
+            results[name] = "ok" if r.returncode == 0 else f"failed (exit {r.returncode})"
+        except subprocess.TimeoutExpired:
+            results[name] = "timeout"
+        except Exception as exc:
+            results[name] = f"error: {exc}"
+    return results
+
+
+def spawn_update_clis_background() -> None:
+    """Fire-and-forget background CLI update; output goes to /tmp/fob-cli-update.log."""
+    import sys
+    log = _UPDATE_LOG.open("w")
+    try:
+        subprocess.Popen(
+            [sys.executable, "-c",
+             "from fob.bootstrap import update_clis; r = update_clis(); "
+             "[print(f'{k}: {v}') for k,v in r.items()]"],
+            stdout=log, stderr=log,
+            start_new_session=True,
+        )
+    except Exception:
+        pass

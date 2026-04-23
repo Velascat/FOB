@@ -59,6 +59,7 @@ def show_menu(_: list[str]) -> None:
         ("demo",      "validate selector + planning handoff architecture"),
         ("providers", "show selector and lane readiness"),
         ("doctor",    "full dependency check + install"),
+        ("update",  "update claude, codex, and aider CLIs"),
         ("loadout", "install and configure dev tools"),
         ("cheat",   "keybinding reference"),
         ("help",    "full command reference"),
@@ -151,7 +152,8 @@ def show_help(_: list[str]) -> None:
             ("test",              "Run project tests"),
             ("audit",             "Run project audit"),
         ]),
-("TOOLS", [
+        ("TOOLS", [
+            ("update",            "Update claude, codex, and aider CLIs"),
             ("cheat",             "Open full cheatsheet in floating pane"),
             ("loadout",           "Install and configure dev tools"),
             ("install",           "Symlink fob to ~/.local/bin"),
@@ -401,10 +403,12 @@ def _run_brief(profiles: list[dict], use_saved_layout: bool = False, tab_name: s
     """Core brief flow shared by `fob brief`, `fob multi`, and `fob restore`."""
     from fob.profile_loader import load_profile
     from fob.launcher import launch, FOB_SESSION
-    from fob.bootstrap import ensure_claude_md, write_bootstrap_file
+    from fob.bootstrap import ensure_claude_md, write_bootstrap_file, spawn_update_clis_background
     from fob.session import session_exists as _sess_exists
     from fob.session_group import save as _sg_save
     import os as _os
+
+    spawn_update_clis_background()
 
     for profile in profiles:
         claude_cfg = profile.get("claude", {})
@@ -615,6 +619,9 @@ def main() -> None:
 
         case "cheat":
             commands.cmd_cheat(args, SCRIPTS_DIR)
+
+        case "update":
+            commands.cmd_update(args)
 
         case "loadout":
             commands.cmd_loadout(args, SCRIPTS_DIR)
