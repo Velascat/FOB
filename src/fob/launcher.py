@@ -112,7 +112,7 @@ def _single_pane_block(
 #
 #  Left  28%: interactive git-dirty watcher (Enter → lazygit for that repo)
 #  Center   : stacked chats — claude / codex
-#  Right 28%: stacked shells + status (status last)
+#  Right 28%: shell (GitHub dir) + status (status last)
 
 def _multi_pane_block(
     profiles: list[dict],
@@ -170,25 +170,17 @@ def _multi_pane_block(
     status_arg = f" --repo '{_repo_filter}'" if _repo_filter else ""
     status_cmd = _status_shell(str(_CP_STATUS), status_arg, key=session_key, fob_dir=fob_dir)
 
-    shell_stack = f'{i}        pane stacked=true {{\n'
-    for p in profiles:
-        repo = p["repo_root"].replace("'", "'\\''")
-        shell_stack += (
-            f'{i}            pane name="shell-{p["name"]}" command="bash" {{\n'
-            f'{i}                args "-c" "cd \'{repo}\' && exec bash -l"\n'
-            f'{i}            }}\n'
-        )
-    shell_stack += (
+    right_block = (
+        f'{i}    pane size="28%" {{\n'
+        f'{i}        pane stacked=true {{\n'
+        f'{i}            pane name="shell" command="bash" {{\n'
+        f'{i}                args "-c" "cd \'{safe_cwd}\' && while true; do bash -l; sleep 1; done"\n'
+        f'{i}            }}\n'
         f'{i}            pane name="status" command="bash" {{\n'
         f'{i}                args "-c" "{status_cmd}"\n'
         f'{i}            }}\n'
         f'{i}        }}\n'
-    )
-
-    right_block = (
-        f'{i}    pane size="28%" {{\n'
-        + shell_stack
-        + f'{i}    }}\n'
+        f'{i}    }}\n'
     )
 
     return (
