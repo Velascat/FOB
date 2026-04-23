@@ -111,7 +111,7 @@ def _single_pane_block(
 
 # ── multi-repo pane block ─────────────────────────────────────────────────────
 #
-#  Left  28%: stacked lazygits (all repos)
+#  Left  28%: interactive git-dirty watcher (Enter → lazygit for that repo)
 #  Center   : stacked chats — claude / codex
 #  Right 28%: stacked shells + status (status last)
 
@@ -134,22 +134,19 @@ def _multi_pane_block(
         fob_dir=fob_dir, session_key=session_key,
     )
 
-    # Left column: all lazygits stacked
-    lazygit_stack = f'{i}        pane stacked=true {{\n'
-    for p in profiles:
-        repo    = p["repo_root"].replace("'", "'\\''")
-        git_cmd = p.get("panes", {}).get("git", {}).get("command", "lazygit")
-        lazygit_stack += (
-            f'{i}            pane name="git-{p["name"]}" command="bash" {{\n'
-            f'{i}                args "-c" "cd \'{repo}\' && {git_cmd}; exec bash -l"\n'
-            f'{i}            }}\n'
-        )
-    lazygit_stack += f'{i}        }}\n'
-
+    # Left column: single interactive git-dirty watcher (replaces N lazygit instances).
+    # Enter on a repo execs lazygit for it; the restart loop brings the watcher back.
+    repo_args = " ".join(f"'{p['repo_root']}'" for p in profiles)
+    watcher_cmd = (
+        f"while true; do "
+        f"python3 -m fob.git_watcher {repo_args}; "
+        f"sleep 1; "
+        f"done"
+    )
     left_block = (
-        f'{i}    pane size="28%" {{\n'
-        + lazygit_stack
-        + f'{i}    }}\n'
+        f'{i}    pane size="28%" name="git" command="bash" {{\n'
+        f'{i}        args "-c" "{watcher_cmd}"\n'
+        f'{i}    }}\n'
     )
 
     # Center: stacked chats — claude / codex
