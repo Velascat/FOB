@@ -26,12 +26,13 @@ def _status_cmd(cp_status: str, status_arg: str, key: str = "default") -> str:
     """
     script = (
         "#!/usr/bin/env bash\n"
-        # Function — printf \033 works here because printf interprets the sequence
         "_mouse_off() {\n"
         r"  printf '\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?1015l'" + "\n"
         "}\n"
-        # Trap body is now plain identifiers — no quoting issues
-        "trap '_mouse_off; tput cnorm' EXIT INT TERM HUP\n"
+        # Alternate screen keeps all output out of scrollback.
+        # Trap restores normal screen + cursor + mouse on any exit.
+        "trap '_mouse_off; tput rmcup; tput cnorm' EXIT INT TERM HUP\n"
+        "tput smcup\n"
         "while true; do\n"
         "  tput cup 0 0\n"
         "  tput ed\n"
