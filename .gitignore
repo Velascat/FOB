@@ -13,7 +13,8 @@ config/profiles/*.yaml
 !config/profiles/switchboard.yaml
 !config/profiles/workstation.yaml
 
-# Saved tab layouts and session IDs (captured from live sessions — always private)
+# Saved tab layouts, session IDs, and generated rc files (always private)
 config/profiles/*.kdl
 config/profiles/*.session
 config/profiles/*.codex-session
+config/profiles/status-rc-*.sh
