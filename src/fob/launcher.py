@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fob.session import session_exists
 from fob.guardrails import check_branch
-from fob.bootstrap import get_claude_command, get_codex_command, get_aider_command
+from fob.bootstrap import get_claude_command, get_codex_command
 
 
 FOB_SESSION = "fob"
@@ -24,8 +24,8 @@ def _c(text: str, *keys: str) -> str:
 # ── single-repo pane block ────────────────────────────────────────────────────
 #
 #  Left  28%: lazygit
-#  Center   : stacked chats — claude / codex / aider
-#  Right 28%: shell (top) + control-plane status (bottom, 25%) — mirrors multi layout
+#  Center   : stacked chats — claude / codex
+#  Right 28%: stacked shell + status (status last)
 
 def _single_pane_block(
     profile: dict,
@@ -45,7 +45,7 @@ def _single_pane_block(
 
     claude_cmd = get_claude_command(profile, Path(repo), fob_dir=fob_dir, claude_cwd=claude_cwd)
     codex_cmd  = get_codex_command(profile, Path(repo), fob_dir=fob_dir)
-    aider_cmd  = get_aider_command(profile, Path(repo), fob_dir=fob_dir)
+    status_cmd = f"while true; do tput cup 0 0; tput ed; bash '{cp_status}' status{status_arg}; sleep 10; done"
 
     return (
         f'{i}pane split_direction="vertical" {{\n'
@@ -53,7 +53,7 @@ def _single_pane_block(
         f'{i}    pane size="28%" name="git" command="bash" {{\n'
         f'{i}        args "-c" "cd \'{safe_repo}\' && {git_cmd}; exec bash -l"\n'
         f'{i}    }}\n'
-        # Center: stacked chats only
+        # Center: stacked chats — claude / codex
         f'{i}    pane {{\n'
         f'{i}        pane stacked=true {{\n'
         f'{i}            pane name="claude" command="bash" {{\n'
@@ -62,18 +62,17 @@ def _single_pane_block(
         f'{i}            pane name="codex" command="bash" {{\n'
         f'{i}                args "-c" "cd \'{safe_cwd}\' && {codex_cmd}"\n'
         f'{i}            }}\n'
-        f'{i}            pane name="aider" command="bash" {{\n'
-        f'{i}                args "-c" "cd \'{safe_cwd}\' && {aider_cmd}"\n'
-        f'{i}            }}\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
-        # Right column: shell (top) + status (bottom) — same ratio as multi layout
-        f'{i}    pane size="28%" split_direction="horizontal" {{\n'
-        f'{i}        pane name="shell" command="bash" {{\n'
-        f'{i}            args "-c" "cd \'{safe_repo}\' && while true; do bash -l; done"\n'
-        f'{i}        }}\n'
-        f'{i}        pane size="25%" name="status" command="bash" {{\n'
-        f'{i}            args "-c" "bash \'{cp_status}\' status{status_arg}"\n'
+        # Right column: stacked shell + status (status last)
+        f'{i}    pane size="28%" {{\n'
+        f'{i}        pane stacked=true {{\n'
+        f'{i}            pane name="shell" command="bash" {{\n'
+        f'{i}                args "-c" "cd \'{safe_repo}\' && while true; do bash -l; done"\n'
+        f'{i}            }}\n'
+        f'{i}            pane name="status" command="bash" {{\n'
+        f'{i}                args "-c" "{status_cmd}"\n'
+        f'{i}            }}\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
         f'{i}}}'
@@ -83,8 +82,8 @@ def _single_pane_block(
 # ── multi-repo pane block ─────────────────────────────────────────────────────
 #
 #  Left  28%: stacked lazygits (all repos)
-#  Center   : stacked chats — claude / codex / aider
-#  Right 28%: stacked shells (top) + status 25% (bottom)
+#  Center   : stacked chats — claude / codex
+#  Right 28%: stacked shells + status (status last)
 
 def _multi_pane_block(
     profiles: list[dict],
@@ -103,10 +102,6 @@ def _multi_pane_block(
     )
     codex_cmd = get_codex_command(
         profiles[0], _GITHUB_DIR,
-        fob_dir=fob_dir, session_key=session_key,
-    )
-    aider_cmd = get_aider_command(
-        profiles[0], Path(profiles[0]["repo_root"]),
         fob_dir=fob_dir, session_key=session_key,
     )
 
@@ -128,7 +123,7 @@ def _multi_pane_block(
         + f'{i}    }}\n'
     )
 
-    # Center: stacked chats — claude / codex / aider
+    # Center: stacked chats — claude / codex
     center_block = (
         f'{i}    pane {{\n'
         f'{i}        pane stacked=true {{\n'
@@ -138,19 +133,17 @@ def _multi_pane_block(
         f'{i}            pane name="codex" command="bash" {{\n'
         f'{i}                args "-c" "cd \'{safe_cwd}\' && {codex_cmd}"\n'
         f'{i}            }}\n'
-        f'{i}            pane name="aider" command="bash" {{\n'
-        f'{i}                args "-c" "cd \'{safe_cwd}\' && {aider_cmd}"\n'
-        f'{i}            }}\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
     )
 
-    # Right column: stacked shells (top) + status (bottom)
+    # Right column: stacked shells + status (status last)
     _repo_filter = next(
         (p["status_repos"] for p in profiles if "status_repos" in p),
         "",
     )
     status_arg = f" --repo '{_repo_filter}'" if _repo_filter else ""
+    status_cmd = f"while true; do tput cup 0 0; tput ed; bash '{cp_status}' status{status_arg}; sleep 10; done"
 
     shell_stack = f'{i}        pane stacked=true {{\n'
     for p in profiles:
@@ -160,14 +153,16 @@ def _multi_pane_block(
             f'{i}                args "-c" "cd \'{repo}\' && exec bash -l"\n'
             f'{i}            }}\n'
         )
-    shell_stack += f'{i}        }}\n'
+    shell_stack += (
+        f'{i}            pane name="status" command="bash" {{\n'
+        f'{i}                args "-c" "{status_cmd}"\n'
+        f'{i}            }}\n'
+        f'{i}        }}\n'
+    )
 
     right_block = (
-        f'{i}    pane size="28%" split_direction="horizontal" {{\n'
+        f'{i}    pane size="28%" {{\n'
         + shell_stack
-        + f'{i}        pane size="25%" name="status" command="bash" {{\n'
-        f'{i}            args "-c" "bash \'{cp_status}\' status{status_arg}"\n'
-        f'{i}        }}\n'
         + f'{i}    }}\n'
     )
 
