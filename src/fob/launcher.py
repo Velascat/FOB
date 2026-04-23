@@ -16,38 +16,6 @@ _CP_STATUS  = _GITHUB_DIR / "ControlPlane" / "scripts" / "control-plane.sh"
 
 _C = {"R": "\033[0m", "DIM": "\033[2m", "GRN": "\033[32m", "YLW": "\033[33m"}
 
-def _status_cmd(cp_status: str, status_arg: str, key: str = "default") -> str:
-    """Write the status refresh loop to a temp script and return 'bash /tmp/...'
-
-    Uses a shell function for mouse-disable so the trap body needs no quoting.
-    Trap with 'printf "\\033[...]"' inside single quotes is broken: bash parses
-    the unquoted \\033 as literal digits, not an escape. A named function sidesteps
-    all of that.
-    """
-    script = (
-        "#!/usr/bin/env bash\n"
-        "_mouse_off() {\n"
-        r"  printf '\033[?1000l\033[?1002l\033[?1003l\033[?1006l\033[?1015l'" + "\n"
-        "}\n"
-        # Alternate screen keeps all output out of scrollback.
-        # Trap restores normal screen + cursor + mouse on any exit.
-        "trap '_mouse_off; tput rmcup; tput cnorm' EXIT INT TERM HUP\n"
-        "tput smcup\n"
-        "while true; do\n"
-        "  tput cup 0 0\n"
-        "  tput ed\n"
-        f"  bash '{cp_status}' status{status_arg}\n"
-        "  _mouse_off\n"
-        "  sleep 10\n"
-        "done\n"
-    )
-    script_path = Path(tempfile.gettempdir()) / f"fob-status-{key}.sh"
-    script_path.write_text(script)
-    script_path.chmod(0o755)
-    safe_path = str(script_path).replace("'", "'\\''")
-    return f"bash '{safe_path}'"
-
-
 def _c(text: str, *keys: str) -> str:
     return "".join(_C[k] for k in keys) + text + _C["R"]
 
@@ -76,7 +44,7 @@ def _single_pane_block(
 
     claude_cmd = get_claude_command(profile, Path(repo), fob_dir=fob_dir, claude_cwd=claude_cwd)
     codex_cmd  = get_codex_command(profile, Path(repo), fob_dir=fob_dir)
-    status_cmd = _status_cmd(cp_status, status_arg, key=profile.get("name", "single"))
+    status_init = f"alias status='bash \\'{cp_status}\\' status{status_arg}'"
 
     return (
         f'{i}pane split_direction="vertical" {{\n'
@@ -102,7 +70,7 @@ def _single_pane_block(
         f'{i}                args "-c" "cd \'{safe_repo}\' && while true; do printf \'\\033[?1000l\\033[?1002l\\033[?1003l\\033[?1006l\\033[?1015l\' 2>/dev/null; bash -l; done"\n'
         f'{i}            }}\n'
         f'{i}            pane name="status" command="bash" {{\n'
-        f'{i}                args "-c" "{status_cmd}"\n'
+        f'{i}                args "-c" "{status_init}; exec bash -l"\n'
         f'{i}            }}\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
@@ -174,7 +142,7 @@ def _multi_pane_block(
         "",
     )
     status_arg = f" --repo '{_repo_filter}'" if _repo_filter else ""
-    status_cmd = _status_cmd(cp_status, status_arg, key=session_key)
+    status_init = f"alias status='bash \\'{cp_status}\\' status{status_arg}'"
 
     shell_stack = f'{i}        pane stacked=true {{\n'
     for p in profiles:
@@ -186,7 +154,7 @@ def _multi_pane_block(
         )
     shell_stack += (
         f'{i}            pane name="status" command="bash" {{\n'
-        f'{i}                args "-c" "{status_cmd}"\n'
+        f'{i}                args "-c" "{status_init}; exec bash -l"\n'
         f'{i}            }}\n'
         f'{i}        }}\n'
     )
