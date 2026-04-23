@@ -16,22 +16,28 @@ _CP_STATUS  = _GITHUB_DIR / "ControlPlane" / "scripts" / "control-plane.sh"
 
 _C = {"R": "\033[0m", "DIM": "\033[2m", "GRN": "\033[32m", "YLW": "\033[33m"}
 
-def _status_shell(cp_status: str, status_arg: str, key: str = "default") -> str:
+def _status_shell(cp_status_raw: str, status_arg: str, key: str = "default") -> str:
     """Return a bash command that opens a shell with a 'status' alias pre-set.
 
-    Uses bash --init-file so the alias survives in the interactive session.
-    All quoting complexity stays in the temp files, not in the KDL string.
+    cp_status_raw is the raw (unescaped) path string — escaping is handled
+    here per context (rc file vs shell args) rather than inheriting escaping
+    intended for a different quoting context.
     """
-    rc_path = Path(tempfile.gettempdir()) / f"fob-status-rc-{key}.sh"
-    # status_arg may contain single-quoted repo names (e.g. --repo 'Foo').
-    # Inside the alias's outer single quotes that breaks quoting — use double quotes.
+    key = key.lower()
+    # In the rc file we double-quote the path, so only " needs escaping.
+    dq_path = cp_status_raw.replace('"', '\\"')
+    # status_arg may contain single-quoted repo names — swap to double quotes
+    # so they don't break the alias's outer single-quote delimiters.
     safe_arg = status_arg.replace("'", '"')
+
+    rc_path = Path(tempfile.gettempdir()) / f"fob-status-rc-{key}.sh"
     rc_path.write_text(
         "source ~/.bashrc 2>/dev/null\n"
-        f"alias status='bash \"{cp_status}\" status{safe_arg}'\n"
+        f'alias status=\'bash "{dq_path}" status{safe_arg}\'\n'
     )
-    script_path = Path(tempfile.gettempdir()) / f"fob-status-{key}.sh"
+
     rc = str(rc_path).replace("'", "'\\''")
+    script_path = Path(tempfile.gettempdir()) / f"fob-status-{key}.sh"
     script_path.write_text(
         "#!/usr/bin/env bash\n"
         f"exec bash --init-file '{rc}' -i\n"
@@ -69,7 +75,7 @@ def _single_pane_block(
 
     claude_cmd  = get_claude_command(profile, Path(repo), fob_dir=fob_dir, claude_cwd=claude_cwd)
     codex_cmd   = get_codex_command(profile, Path(repo), fob_dir=fob_dir)
-    status_cmd  = _status_shell(cp_status, status_arg, key=profile.get("name", "single"))
+    status_cmd  = _status_shell(str(_CP_STATUS), status_arg, key=profile.get("name", "single"))
 
     return (
         f'{i}pane split_direction="vertical" {{\n'
@@ -92,7 +98,7 @@ def _single_pane_block(
         f'{i}    pane size="28%" {{\n'
         f'{i}        pane stacked=true {{\n'
         f'{i}            pane name="shell" command="bash" {{\n'
-        f'{i}                args "-c" "cd \'{safe_repo}\' && while true; do bash -l; done"\n'
+        f'{i}                args "-c" "cd \'{safe_repo}\' && while true; do bash -l; sleep 1; done"\n'
         f'{i}            }}\n'
         f'{i}            pane name="status" command="bash" {{\n'
         f'{i}                args "-c" "{status_cmd}"\n'
@@ -167,7 +173,7 @@ def _multi_pane_block(
         "",
     )
     status_arg = f" --repo '{_repo_filter}'" if _repo_filter else ""
-    status_cmd = _status_shell(cp_status, status_arg, key=session_key)
+    status_cmd = _status_shell(str(_CP_STATUS), status_arg, key=session_key)
 
     shell_stack = f'{i}        pane stacked=true {{\n'
     for p in profiles:
@@ -355,13 +361,17 @@ def launch(
         if tab_name in existing_tabs:
             print(f"  {_c('tab', 'DIM')}  {_c(tab_name, 'DIM')}  {_c('already open', 'DIM')}")
         else:
-            subprocess.run([
+            r = subprocess.run([
                 "zellij", "--session", FOB_SESSION,
                 "action", "new-tab",
                 "--name", tab_name,
                 "--layout", str(layout_path),
-            ], capture_output=True)
-            print(f"  {_c('tab', 'DIM')}  {_c(tab_name, 'GRN')}  {_c('added', 'GRN')}")
+            ], capture_output=True, text=True)
+            if r.returncode == 0:
+                print(f"  {_c('tab', 'DIM')}  {_c(tab_name, 'GRN')}  {_c('added', 'GRN')}")
+            else:
+                print(f"  {_c('tab', 'DIM')}  {_c(tab_name, 'YLW')}  {_c('failed', 'YLW')}")
+                print(f"  {_c(r.stderr.strip(), 'DIM')}")
         if not os.environ.get("ZELLIJ"):
             _clear_resurrection_cache(FOB_SESSION)
             attach(FOB_SESSION)
