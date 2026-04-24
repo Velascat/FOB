@@ -17,29 +17,32 @@ _CP_STATUS  = _GITHUB_DIR / "ControlPlane" / "scripts" / "control-plane.sh"
 
 _C = {"R": "\033[0m", "DIM": "\033[2m", "GRN": "\033[32m", "YLW": "\033[33m"}
 
-def _status_rc(cp_status_raw: str, status_arg: str, key: str = "default", fob_dir: Path | None = None) -> str:
-    """Write the status alias rc file and return its path (KDL-safe string).
+def _status_viewer_cmd(cp_status_raw: str, status_arg: str, key: str = "default") -> str:
+    """Write a restart-loop launch script for the status viewer and return the bash command.
 
-    The pane uses `bash --init-file <path> -i` directly — no temp-script layer.
-    rc file lives in fob_dir (persistent) so the alias survives session resurrection.
-    Falls back to /tmp if fob_dir is None.
+    Uses fob.status_viewer (mirrors git_watcher): clears screen, runs status,
+    disables mouse modes Rich may have enabled, waits for r/q.  The while-loop
+    in the script restarts the viewer if the user presses q (keeps pane alive).
     """
     key = key.lower()
-    dq_path = cp_status_raw.replace('"', '\\"')
-    safe_arg = status_arg.replace("'", '"')
 
-    base = (fob_dir / "config" / "profiles") if fob_dir else Path(tempfile.gettempdir())
-    base.mkdir(parents=True, exist_ok=True)
+    # Build the extra args list for status_viewer (repo filter, if any)
+    # status_arg is already shell-safe: single quotes replaced with double quotes
+    safe_arg = status_arg.replace("'", '"').strip()
+    viewer_extra = f" {safe_arg}" if safe_arg else ""
 
-    rc_path = base / f"status-rc-{key}.sh"
-    rc_path.write_text(
-        "source ~/.bashrc 2>/dev/null\n"
-        f'alias status=\'bash "{dq_path}" status{safe_arg}\'\n'
-        "echo '  → type status to run control-plane status'\n"
+    script_path = Path(tempfile.gettempdir()) / f"fob-status-{key}.sh"
+    script_path.write_text(
+        "#!/usr/bin/env bash\n"
+        f"while true; do\n"
+        f"    python3 -m fob.status_viewer '{cp_status_raw}'{viewer_extra}\n"
+        f"    sleep 1\n"
+        f"done\n"
     )
+    script_path.chmod(0o755)
 
-    # KDL double-quoted string: only " needs escaping (paths won't have backslashes)
-    return str(rc_path).replace('"', '\\"')
+    safe_path = str(script_path).replace("'", "'\\''")
+    return f"bash '{safe_path}'"
 
 
 def _c(text: str, *keys: str) -> str:
@@ -67,9 +70,9 @@ def _single_pane_block(
     status_arg   = f" --repo '{status_repos}'" if status_repos else ""
     i = indent
 
-    claude_cmd  = get_claude_command(profile, Path(repo), fob_dir=fob_dir, claude_cwd=claude_cwd)
-    codex_cmd   = get_codex_command(profile, Path(repo), fob_dir=fob_dir)
-    status_rc   = _status_rc(str(_CP_STATUS), status_arg, key=profile.get("name", "single"), fob_dir=fob_dir)
+    claude_cmd   = get_claude_command(profile, Path(repo), fob_dir=fob_dir, claude_cwd=claude_cwd)
+    codex_cmd    = get_codex_command(profile, Path(repo), fob_dir=fob_dir)
+    status_cmd   = _status_viewer_cmd(str(_CP_STATUS), status_arg, key=profile.get("name", "single"))
 
     return (
         f'{i}pane split_direction="vertical" {{\n'
@@ -95,7 +98,7 @@ def _single_pane_block(
         f'{i}                args "-c" "cd \'{safe_repo}\' && while true; do bash -l; sleep 1; done"\n'
         f'{i}            }}\n'
         f'{i}            pane name="status" command="bash" {{\n'
-        f'{i}                args "--init-file" "{status_rc}" "-i"\n'
+        f'{i}                args "-c" "{status_cmd}"\n'
         f'{i}            }}\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
@@ -163,7 +166,7 @@ def _multi_pane_block(
         "",
     )
     status_arg = f" --repo '{_repo_filter}'" if _repo_filter else ""
-    status_rc  = _status_rc(str(_CP_STATUS), status_arg, key=session_key, fob_dir=fob_dir)
+    status_cmd = _status_viewer_cmd(str(_CP_STATUS), status_arg, key=session_key)
 
     right_block = (
         f'{i}    pane size="28%" {{\n'
@@ -172,7 +175,7 @@ def _multi_pane_block(
         f'{i}                args "-c" "cd \'{safe_cwd}\' && while true; do bash -l; sleep 1; done"\n'
         f'{i}            }}\n'
         f'{i}            pane name="status" command="bash" {{\n'
-        f'{i}                args "--init-file" "{status_rc}" "-i"\n'
+        f'{i}                args "-c" "{status_cmd}"\n'
         f'{i}            }}\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
