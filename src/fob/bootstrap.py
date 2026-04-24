@@ -175,9 +175,13 @@ def get_codex_command(
     """
     import tempfile
 
-    codex_cfg = profile.get("codex", {})
-    codex_bin = codex_cfg.get("bin", "codex")
-    safe_bin  = codex_bin.replace("'", "'\\''")
+    codex_cfg    = profile.get("codex", {})
+    codex_bin    = codex_cfg.get("bin", "codex")
+    safe_bin     = codex_bin.replace("'", "'\\''")
+    # Default to --full-auto (sandboxed, no per-command approval prompts).
+    # Override per-profile with codex.approval_mode: "" to get default behaviour.
+    approval     = codex_cfg.get("approval_mode", "--full-auto")
+    approval_arg = f" {approval}" if approval else ""
 
     not_found_block = (
         "#!/usr/bin/env bash\n"
@@ -192,7 +196,7 @@ def get_codex_command(
         # Single-repo: let codex filter by cwd natively
         script = (
             not_found_block
-            + f"'{safe_bin}' resume --last 2>/dev/null || '{safe_bin}'\n"
+            + f"'{safe_bin}'{approval_arg} resume --last 2>/dev/null || '{safe_bin}'{approval_arg}\n"
             + "exec bash -l\n"
         )
         key = profile.get("name", "unknown").lower()
@@ -206,9 +210,9 @@ def get_codex_command(
                 not_found_block
                 + f"SESSION_FILE='{sf}'\n"
                 + "if [ -f \"$SESSION_FILE\" ]; then\n"
-                + f"    '{safe_bin}' resume \"$(cat \"$SESSION_FILE\")\" || '{safe_bin}'\n"
+                + f"    '{safe_bin}'{approval_arg} resume \"$(cat \"$SESSION_FILE\")\" || '{safe_bin}'{approval_arg}\n"
                 + "else\n"
-                + f"    '{safe_bin}'\n"
+                + f"    '{safe_bin}'{approval_arg}\n"
                 + "fi\n"
                 # Extract UUID from newest session file after exit
                 + "newest=$(find ~/.codex/sessions -name 'rollout-*.jsonl' 2>/dev/null"
@@ -220,7 +224,7 @@ def get_codex_command(
         else:
             script = (
                 not_found_block
-                + f"'{safe_bin}'\n"
+                + f"'{safe_bin}'{approval_arg}\n"
                 + "exec bash -l\n"
             )
 
