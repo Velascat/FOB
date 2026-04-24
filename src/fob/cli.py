@@ -57,6 +57,8 @@ def show_menu(_: list[str]) -> None:
         ("rewatch", "restart git watcher for this tab's profile"),
         ("status",  "repo, branch, session state"),
         ("resume",  "print mission brief"),
+        ("delegate",   "run a task through the full execution pipeline"),
+        ("last",       "inspect the most recent execution run"),
         ("demo",      "validate selector + planning handoff architecture"),
         ("providers", "show selector and lane readiness"),
         ("doctor",    "full dependency check + install"),
@@ -124,8 +126,9 @@ def show_help(_: list[str]) -> None:
             ("doctor",            "Check dependencies (Zellij, Claude, lazygit…)"),
         ]),
         ("VISIBILITY", [
-            ("status",            "Session, layout, branch, .fob/ state"),
-            ("status --all",      "Compact table of all repos"),
+            ("status",            "System readiness: SwitchBoard, ControlPlane, lanes, last run"),
+            ("status --repo",     "Repo/session state (branch, layout, .fob/ files)"),
+            ("status --all",      "All repos compact table"),
             ("map",               "Full state snapshot  (--json for machine output)"),
             ("map --all",         "Snapshot of all repos  (--json supported)"),
         ]),
@@ -145,6 +148,13 @@ def show_help(_: list[str]) -> None:
             ("layout reset",      "Delete saved layout state for current repo"),
         ]),
         ("OPS", [
+            ("delegate --goal TEXT",   "Run a task through the full ControlPlane pipeline"),
+            ("delegate --dry-run",     "Planning only — print lane decision without executing"),
+            ("last",                   "Inspect the most recent execution run"),
+            ("last --all",             "Show last run + list of recent runs"),
+            ("last --json",            "Machine-readable last run summary"),
+            ("status",                 "System readiness: SwitchBoard, ControlPlane, lanes"),
+            ("status --json",          "Machine-readable system readiness"),
             ("demo",              "Validate stack → SwitchBoard route → ControlPlane handoff"),
             ("demo --no-start",   "Run the same validation without starting the stack"),
             ("demo --json",       "Machine-readable summary"),
@@ -595,9 +605,21 @@ def main() -> None:
         case "resume":
             commands.cmd_resume(args, _profile_for_cwd())
 
+        case "delegate":
+            from fob.delegate import run_delegate
+            sys.exit(run_delegate(args))
+
+        case "last":
+            from fob.last import run_last
+            sys.exit(run_last(args))
+
         case "status":
-            all_repos = _discover_repos() if "--all" in args else None
-            commands.cmd_status(args, FOB_DIR, _profile_for_cwd(), all_repos)
+            if "--repo" in args or "--all" in args:
+                all_repos = _discover_repos() if "--all" in args else None
+                commands.cmd_status(args, FOB_DIR, _profile_for_cwd(), all_repos)
+            else:
+                from fob.system_status import run_status
+                sys.exit(run_status(args))
 
         case "demo":
             from fob.demo import run_demo
