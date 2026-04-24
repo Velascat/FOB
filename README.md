@@ -1,6 +1,6 @@
 # FOB — Forward Operating Base
 
-A persistent, repo-scoped operator workspace for Claude-driven development. Run `fob` from any repo — it attaches to your existing session or creates a new one, and Claude resumes exactly where you left off.
+Operator console for Claude-driven development. Persistent Zellij workspaces with mission-file continuity, plus a full execution pipeline that delegates tasks to ControlPlane, routes them through SwitchBoard, and records canonical run artifacts.
 
 ## What FOB Is
 
@@ -198,12 +198,31 @@ FOB is a persistent system. Every persistent system needs a clear escape hatch.
 | `fob cheat` | Open keybinding reference |
 | `fob install` | Symlink `fob` to `~/.local/bin` |
 
+**Execution pipeline:**
+
+| Command | Description |
+|---------|-------------|
+| `fob status` | System readiness: SwitchBoard, ControlPlane, lane binaries, last run |
+| `fob status --json` | Machine-readable system readiness |
+| `fob delegate --goal TEXT` | Run a task through the full ControlPlane pipeline |
+| `fob delegate --dry-run` | Planning only — print lane decision without executing |
+| `fob auto-once` | Single autonomous cycle: observe → propose → decide → execute |
+| `fob auto-once --dry-run` | Observe + plan only, no execution |
+| `fob last` | Inspect the most recent run (status, lane, artifacts) |
+| `fob last --all` | Most recent run + list of recent runs |
+| `fob last --json` | Machine-readable last run summary |
+| `fob runs` | List recent runs newest-first (status, lane, timestamp, goal) |
+| `fob runs --limit N` | Show N most recent runs |
+| `fob runs --json` | Machine-readable run list |
+
+Run artifacts are written to `~/.fob/control_plane/runs/<run_id>/` by ControlPlane's `RunArtifactWriter`. Each run directory contains `proposal.json`, `decision.json`, `execution_request.json`, `result.json`, and `run_metadata.json`. Runs accumulate — use `fob runs` to browse history.
+
 **Platform validation:**
 
 | Command | Description |
 |---------|-------------|
-| `fob demo` | Validate stack, selector route, and ControlPlane handoff |
-| `fob demo --no-start` | Run the same validation without starting the stack |
+| `fob demo` | End-to-end validation: preflight → stack → health → route → planning → execution |
+| `fob demo --no-start` | Same validation without starting the stack |
 | `fob demo --json` | Machine-readable demo summary |
 | `fob providers` | Show selector and lane readiness |
 | `fob providers --wait` | Poll until SwitchBoard is healthy |
@@ -281,9 +300,9 @@ See [docs/profiles.md](docs/profiles.md).
 
 ## Ownership boundary
 
-FOB owns the operator experience: session management, workspace layout, mission files, and operator-facing command entrypoints like `fob demo` and `fob brief`. FOB delegates platform lifecycle actions (stack up/down/health) to WorkStation and does not own infrastructure internals.
+FOB owns the operator experience: session management, workspace layout, mission files, and execution pipeline commands (`fob delegate`, `fob auto-once`, `fob last`, `fob runs`, `fob demo`). FOB delegates platform lifecycle actions (stack up/down/health) to WorkStation and delegates all planning, routing, and execution to ControlPlane and SwitchBoard via subprocess.
 
-FOB does **not** own service Dockerfiles, compose manifests, routing policy, or autonomy logic. Those belong to WorkStation, SwitchBoard, and ControlPlane respectively.
+FOB does **not** own service Dockerfiles, compose manifests, routing policy, adapter logic, or contract definitions. Those belong to WorkStation, SwitchBoard, and ControlPlane respectively. FOB has no direct imports from any of those repos at runtime.
 
 For the full platform ownership model see `WorkStation/docs/architecture/ownership.md`.
 
@@ -292,5 +311,8 @@ For the full platform ownership model see `WorkStation/docs/architecture/ownersh
 ## Further Reading
 
 - [docs/architecture.md](docs/architecture.md) — launcher flow, session model, layout persistence internals
+- [docs/cockpit.md](docs/cockpit.md) — execution pipeline commands: delegate, last, status, runs
+- [docs/daily-use.md](docs/daily-use.md) — startup, run, inspect, cleanup, and known limits
+- [docs/demo.md](docs/demo.md) — end-to-end architecture validation walkthrough
 - [docs/profiles.md](docs/profiles.md) — profile format and optional configuration
 - [docs/guardrails.md](docs/guardrails.md) — safe branch practices and Claude operating model
