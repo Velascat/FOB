@@ -164,16 +164,36 @@ def run_delegate(args: list[str]) -> int:
         print(f"  {_c('──', 'DIM')} planning")
 
     plan_proc = subprocess.run(plan_cmd, cwd=cp_repo, env=env, capture_output=True, text=True)
-    if plan_proc.returncode != 0:
-        _fail("Planning failed")
-        _info(plan_proc.stderr.strip() or plan_proc.stdout.strip())
-        return 1
 
+    # Try to parse structured JSON regardless of exit code — the worker emits
+    # structured error JSON on SwitchBoard failure (exit 1 + JSON to stdout).
     try:
         bundle = json.loads(plan_proc.stdout)
     except Exception:
-        _fail("Planning returned invalid JSON")
-        _info(plan_proc.stdout[:300])
+        # stdout is not JSON at all — genuine crash
+        _fail("Planning crashed (no JSON output)")
+        _info(plan_proc.stderr.strip() or plan_proc.stdout.strip())
+        return 1
+
+    if plan_proc.returncode != 0:
+        # Structured failure from worker — routing_failure or similar
+        error_type = bundle.get("error_type", "unknown")
+        message = bundle.get("message", "planning failed")
+        partial_run_id = bundle.get("partial_run_id")
+
+        if opts["json"]:
+            print(json.dumps({
+                "error": bundle.get("error", "planning_failure"),
+                "error_type": error_type,
+                "message": message,
+                "partial_run_id": partial_run_id,
+            }, indent=2))
+        else:
+            _fail(f"Planning failed — {error_type}")
+            _info(message)
+            if partial_run_id:
+                from fob.runs import runs_root
+                _info(f"partial artifacts: {runs_root() / partial_run_id}")
         return 1
 
     decision = bundle.get("decision", {})
@@ -216,16 +236,36 @@ def run_delegate(args: list[str]) -> int:
             _tag("Adapter", f"executing  lane={lane}  backend={backend}")
 
         exec_proc = subprocess.run(exec_cmd, cwd=cp_repo, env=env, capture_output=True, text=True)
-        if exec_proc.returncode != 0:
-            _fail("Execute entrypoint crashed")
-            _info(exec_proc.stderr.strip() or exec_proc.stdout.strip())
-            return 1
 
         if not result_file.exists():
-            _fail("Execute entrypoint produced no output")
+            if exec_proc.returncode != 0:
+                _fail("Execute entrypoint crashed (no output file)")
+                _info(exec_proc.stderr.strip() or exec_proc.stdout.strip())
+            else:
+                _fail("Execute entrypoint produced no output")
             return 1
 
         outcome = json.loads(result_file.read_text(encoding="utf-8"))
+
+        # Coordinator crash produces structured error JSON without 'result' key
+        if exec_proc.returncode != 0 and "error" in outcome and "result" not in outcome:
+            error_type = outcome.get("error_type", "unknown")
+            message = outcome.get("message", "execution failed")
+            partial_run_id = outcome.get("partial_run_id")
+            if opts["json"]:
+                print(json.dumps({
+                    "error": outcome.get("error", "execution_failure"),
+                    "error_type": error_type,
+                    "message": message,
+                    "partial_run_id": partial_run_id,
+                }, indent=2))
+            else:
+                _fail(f"Execution failed — {error_type}")
+                _info(message)
+                if partial_run_id:
+                    from fob.runs import runs_root
+                    _info(f"partial artifacts: {runs_root() / partial_run_id}")
+            return 1
 
     exec_result = outcome.get("result", {})
     run_id = exec_result.get("run_id", "?")
