@@ -1,33 +1,23 @@
-"""console run — trigger a full execution through the OperationsCenter pipeline.
+"""console run — submit a task to the local queue for OperationsCenter intake.
 
-Wraps the two OperationsCenter entrypoints without duplicating their logic:
+Interactive wizard (repo → task type → goal) writes a JSON task file to
+~/.console/queue/. OperationsCenter's intake role picks it up, elaborates
+it using repo context, and drives it through the execution pipeline.
 
-    1. operations_center.entrypoints.worker.main   → planning (proposal + lane decision)
-    2. operations_center.entrypoints.execute.main  → execution (adapter run + artifacts)
-
-Usage:
-    console run --goal "Refresh README summary"
-    console run --goal "Fix lint errors" --repo-key myrepo --clone-url https://...
-    console run --goal "..." --task-type lint_fix --dry-run
+Non-interactive fast path:
+    console run --goal "Fix the login bug" --task-type bug --repo myrepo
 
 Exit codes:
-    0  success — execution completed and succeeded
-    1  general / unknown failure (crashed, missing args, no JSON output)
-    2  routing failure — SwitchBoard unreachable or returned an error
-    3  policy blocked / review required
-    4  backend execution failure (adapter ran but reported failure)
-    5  timeout during execution
-    6  invalid / malformed output from a subprocess
+    0  task submitted successfully
+    1  cancelled or missing required input
 """
 from __future__ import annotations
 
-import json
-import os
 import subprocess
 import sys
-import tempfile
-import uuid
 from pathlib import Path
+
+from operator_console.queue import TASK_TYPES, submit
 
 _C = {
     "R": "\033[0m", "B": "\033[1m", "DIM": "\033[2m",
@@ -38,10 +28,6 @@ _C = {
 
 def _c(text: str, *keys: str) -> str:
     return "".join(_C[k] for k in keys) + text + _C["R"]
-
-
-def _tag(label: str, msg: str) -> None:
-    print(f"  {_c(f'[{label}]', 'CYN', 'B')} {msg}")
 
 
 def _ok(msg: str) -> None:
@@ -56,68 +42,68 @@ def _info(msg: str) -> None:
     print(f"  {_c('·', 'DIM')} {msg}")
 
 
-def _warn(msg: str) -> None:
-    print(f"  {_c('⚠', 'YLW')} {msg}")
+def _has_fzf() -> bool:
+    try:
+        return subprocess.run(["fzf", "--version"], capture_output=True).returncode == 0
+    except FileNotFoundError:
+        return False
 
 
-# ── Exit-code constants ───────────────────────────────────────────────────────
-EXIT_SUCCESS          = 0  # execution completed and succeeded
-EXIT_GENERAL          = 1  # crashed / missing args / no JSON output
-EXIT_ROUTING_FAILURE  = 2  # SwitchBoard unreachable or routing error
-EXIT_POLICY_BLOCKED   = 3  # policy gate blocked execution
-EXIT_BACKEND_FAILURE  = 4  # adapter ran but the backend reported failure
-EXIT_TIMEOUT          = 5  # execution timed out
-EXIT_MALFORMED        = 6  # subprocess returned unparseable / unexpected output
-
-# Map FailureReasonCategory strings to exit codes
-_FAILURE_CATEGORY_EXIT: dict[str, int] = {
-    "backend_error":        EXIT_BACKEND_FAILURE,
-    "validation_failed":    EXIT_BACKEND_FAILURE,
-    "unsupported_request":  EXIT_BACKEND_FAILURE,
-    "no_changes":           EXIT_BACKEND_FAILURE,
-    "conflict":             EXIT_BACKEND_FAILURE,
-    "timeout":              EXIT_TIMEOUT,
-    "policy_blocked":       EXIT_POLICY_BLOCKED,
-    "routing_error":        EXIT_ROUTING_FAILURE,
-    "unknown":              EXIT_GENERAL,
-}
+def _fzf_pick(items: list[str], prompt: str, header: str = "") -> str | None:
+    """Single-select via fzf. Returns selected line or None if cancelled."""
+    args = ["fzf", "--prompt", prompt, "--height", "12",
+            "--border", "--no-sort", "--ansi"]
+    if header:
+        args += ["--header-first", "--header", header]
+    result = subprocess.run(args, input="\n".join(items), text=True, stdout=subprocess.PIPE)
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    return result.stdout.strip()
 
 
-def _cp_python(cp_repo: Path) -> str:
-    venv_python = cp_repo / ".venv" / "bin" / "python"
-    return str(venv_python) if venv_python.exists() else "python3"
+def _numbered_pick(items: list[str], prompt: str) -> str | None:
+    """Fallback numbered picker when fzf is not available."""
+    for i, item in enumerate(items, 1):
+        print(f"  {_c(str(i), 'YLW')}  {item}")
+    print()
+    try:
+        raw = input(_c(f"  {prompt} [1-{len(items)}]: ", "B")).strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
+    try:
+        idx = int(raw) - 1
+        if 0 <= idx < len(items):
+            return items[idx]
+    except ValueError:
+        pass
+    return None
 
 
-def _repo_root(name: str) -> Path:
-    return Path.home() / "Documents" / "GitHub" / name
+def _pick(items: list[str], prompt: str, header: str = "") -> str | None:
+    if _has_fzf():
+        return _fzf_pick(items, f"  {prompt} > ", header)
+    return _numbered_pick(items, prompt)
 
 
-_DEMO_CP_CONFIG = """\
-plane:
-  base_url: http://localhost:8080
-  api_token_env: PLANE_API_TOKEN
-  workspace_slug: demo
-  project_id: demo
-git:
-  provider: github
-kodo:
-  binary: kodo
-repos: {}
-"""
+def _discover_repos() -> dict[str, Path]:
+    """Return name→path for all git repos under ~/Documents/GitHub/."""
+    github = Path.home() / "Documents" / "GitHub"
+    repos: dict[str, Path] = {}
+    if github.is_dir():
+        for d in sorted(github.iterdir()):
+            if d.is_dir() and (d / ".git").exists():
+                repos[d.name] = d
+    return repos
 
 
 def _parse_args(args: list[str]) -> dict:
     parsed: dict = {
         "goal": None,
-        "task_type": "documentation",
-        "repo_key": "default",
-        "clone_url": "https://example.invalid/placeholder.git",
-        "project_id": None,
-        "task_id": None,
-        "task_branch": None,
-        "dry_run": False,
+        "task_type": None,
+        "repo": None,
+        "priority": "normal",
         "json": False,
-        "source": "manual",
     }
     i = 0
     while i < len(args):
@@ -126,20 +112,10 @@ def _parse_args(args: list[str]) -> dict:
             parsed["goal"] = args[i + 1]; i += 2
         elif a == "--task-type" and i + 1 < len(args):
             parsed["task_type"] = args[i + 1]; i += 2
-        elif a == "--repo-key" and i + 1 < len(args):
-            parsed["repo_key"] = args[i + 1]; i += 2
-        elif a == "--clone-url" and i + 1 < len(args):
-            parsed["clone_url"] = args[i + 1]; i += 2
-        elif a == "--project-id" and i + 1 < len(args):
-            parsed["project_id"] = args[i + 1]; i += 2
-        elif a == "--task-id" and i + 1 < len(args):
-            parsed["task_id"] = args[i + 1]; i += 2
-        elif a == "--task-branch" and i + 1 < len(args):
-            parsed["task_branch"] = args[i + 1]; i += 2
-        elif a == "--source" and i + 1 < len(args):
-            parsed["source"] = args[i + 1]; i += 2
-        elif a == "--dry-run":
-            parsed["dry_run"] = True; i += 1
+        elif a == "--repo" and i + 1 < len(args):
+            parsed["repo"] = args[i + 1]; i += 2
+        elif a == "--priority" and i + 1 < len(args):
+            parsed["priority"] = args[i + 1]; i += 2
         elif a == "--json":
             parsed["json"] = True; i += 1
         else:
@@ -149,210 +125,121 @@ def _parse_args(args: list[str]) -> dict:
 
 def run_delegate(args: list[str]) -> int:
     opts = _parse_args(args)
+    interactive = sys.stdin.isatty()
 
-    # Prompt for goal if not provided
-    if not opts["goal"]:
-        if sys.stdin.isatty():
-            try:
-                opts["goal"] = input(_c("  goal: ", "B")).strip()
-            except (EOFError, KeyboardInterrupt):
-                print()
+    print(_c("\n  console run", "B", "CYN") + _c(" — submit task to queue", "DIM"))
+    print()
+
+    # ── Step 1: Repo ─────────────────────────────────────────────────────────
+
+    repos = _discover_repos()
+
+    # Auto-detect from cwd
+    cwd = Path.cwd()
+    auto_repo: str | None = None
+    for name, path in repos.items():
+        try:
+            cwd.relative_to(path)
+            auto_repo = name
+            break
+        except ValueError:
+            pass
+
+    repo_name: str | None = opts["repo"]
+    repo_path: str | None = None
+
+    if not repo_name:
+        if auto_repo:
+            repo_name = auto_repo
+            repo_path = str(repos[auto_repo])
+            _info(f"repo: {_c(repo_name, 'B')}  (auto-detected from cwd)")
+        elif interactive and repos:
+            print(_c("  Select repo:", "B"))
+            lines = [f"{name}  {_c(str(path), 'DIM')}" for name, path in repos.items()]
+            chosen = _pick(lines, "repo", "\033[93mEnter\033[0m to select")
+            if not chosen:
+                _fail("cancelled")
                 return 1
-        if not opts["goal"]:
-            _fail("--goal is required")
+            repo_name = chosen.split()[0]
+            repo_path = str(repos[repo_name]) if repo_name in repos else None
+        elif not interactive:
+            _fail("--repo is required in non-interactive mode")
             return 1
+        else:
+            _fail("no git repos found under ~/Documents/GitHub/")
+            return 1
+    else:
+        repo_path = str(repos[repo_name]) if repo_name in repos else None
 
-    cp_repo = _repo_root("OperationsCenter")
-    if not cp_repo.exists():
-        _fail(f"OperationsCenter not found at {cp_repo}")
+    # ── Step 2: Task type ────────────────────────────────────────────────────
+
+    task_type: str | None = opts["task_type"]
+
+    if not task_type:
+        if interactive:
+            print()
+            print(_c("  Task type:", "B"))
+            type_lines = [
+                f"{_c(t, 'CYN'):<24}  {_c(desc, 'DIM')}"
+                for t, desc in TASK_TYPES
+            ]
+            chosen = _pick(type_lines, "type", "\033[93mEnter\033[0m to select")
+            if not chosen:
+                _fail("cancelled")
+                return 1
+            # extract the type token (first word, strip ansi)
+            import re
+            task_type = re.sub(r"\033\[[0-9;]*m", "", chosen).strip().split()[0]
+        else:
+            task_type = "chore"
+
+    valid_types = {t for t, _ in TASK_TYPES}
+    if task_type not in valid_types:
+        _fail(f"unknown task type: {task_type!r}  (valid: {', '.join(sorted(valid_types))})")
         return 1
 
-    task_id = opts["task_id"] or f"console-{uuid.uuid4().hex[:8]}"
-    project_id = opts["project_id"] or "console-run"
-    task_branch = opts["task_branch"] or f"auto/{task_id}"
+    # ── Step 3: Goal ─────────────────────────────────────────────────────────
 
-    if not opts["json"]:
-        print(_c("\n  console run", "B", "CYN") + _c(" — delegating task to OperationsCenter", "DIM"))
-        print()
-        _tag("OperatorConsole", f"goal={opts['goal']!r}  type={opts['task_type']}  repo={opts['repo_key']}")
+    goal: str | None = opts["goal"]
 
-    if opts["dry_run"]:
-        if not opts["json"]:
-            _info("--dry-run: planning only, skipping execution")
+    if not goal:
+        if interactive:
+            print()
+            try:
+                goal = input(_c("  What's the problem?\n  > ", "B")).strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                _fail("cancelled")
+                return 1
+        if not goal:
+            _fail("goal is required")
+            return 1
 
-    # ── Step 1: Planning ──────────────────────────────────────────────────────
+    # ── Submit ────────────────────────────────────────────────────────────────
 
-    python = _cp_python(cp_repo)
-    plan_cmd = [
-        python, "-m", "operations_center.entrypoints.worker.main",
-        "--goal", opts["goal"],
-        "--task-type", opts["task_type"],
-        "--repo-key", opts["repo_key"],
-        "--clone-url", opts["clone_url"],
-        "--project-id", project_id,
-        "--task-id", task_id,
-    ]
-    env = dict(os.environ)
-    env["PYTHONPATH"] = str(cp_repo / "src")
-
-    if not opts["json"]:
-        print(f"  {_c('──', 'DIM')} planning")
-
-    plan_proc = subprocess.run(plan_cmd, cwd=cp_repo, env=env, capture_output=True, text=True)
-
-    # Try to parse structured JSON regardless of exit code — the worker emits
-    # structured error JSON on SwitchBoard failure (exit 1 + JSON to stdout).
-    try:
-        bundle = json.loads(plan_proc.stdout)
-    except Exception:
-        # stdout is not JSON at all — genuine crash
-        _fail("Planning crashed (no JSON output)")
-        _info(plan_proc.stderr.strip() or plan_proc.stdout.strip())
-        return EXIT_MALFORMED
-
-    if plan_proc.returncode != 0:
-        # Structured failure from worker — routing_failure or similar
-        error_type = bundle.get("error_type", "unknown")
-        message = bundle.get("message", "planning failed")
-        partial_run_id = bundle.get("partial_run_id")
-
-        if opts["json"]:
-            print(json.dumps({
-                "error": bundle.get("error", "planning_failure"),
-                "error_type": error_type,
-                "message": message,
-                "partial_run_id": partial_run_id,
-            }, indent=2))
-        else:
-            _fail(f"Planning failed — {error_type}")
-            _info(message)
-            if partial_run_id:
-                from operator_console.runs import runs_root
-                _info(f"partial artifacts: {runs_root() / partial_run_id}")
-        # routing_failure and similar worker errors map to EXIT_ROUTING_FAILURE
-        return EXIT_ROUTING_FAILURE
-
-    decision = bundle.get("decision", {})
-    lane = decision.get("selected_lane", "?")
-    backend = decision.get("selected_backend", "?")
-
-    if not opts["json"]:
-        _tag("OperationsCenter", f"proposal created — id={bundle.get('proposal', {}).get('proposal_id', '?')[:8]}…")
-        _tag("SwitchBoard", f"selected lane={lane}  backend={backend}")
-
-    if opts["dry_run"]:
-        if not opts["json"]:
-            _ok("Dry run complete — proposal and lane decision obtained")
-        else:
-            print(json.dumps({"dry_run": True, "lane": lane, "backend": backend}))
-        return 0
-
-    # ── Step 2: Execution ─────────────────────────────────────────────────────
-
-    with tempfile.TemporaryDirectory(prefix="console-run-") as tmpdir:
-        tmp = Path(tmpdir)
-        bundle_file = tmp / "bundle.json"
-        bundle_file.write_text(json.dumps(bundle), encoding="utf-8")
-        config_file = tmp / "operations_center.yaml"
-        config_file.write_text(_DEMO_CP_CONFIG, encoding="utf-8")
-        workspace = tmp / "workspace"
-        workspace.mkdir()
-        result_file = tmp / "result.json"
-
-        exec_cmd = [
-            python, "-m", "operations_center.entrypoints.execute.main",
-            "--config", str(config_file),
-            "--bundle", str(bundle_file),
-            "--workspace-path", str(workspace),
-            "--task-branch", task_branch,
-            "--output", str(result_file),
-            "--source", opts.get("source", "manual"),
-        ]
-
-        if not opts["json"]:
-            _tag("Adapter", f"executing  lane={lane}  backend={backend}")
-
-        exec_proc = subprocess.run(exec_cmd, cwd=cp_repo, env=env, capture_output=True, text=True)
-
-        if not result_file.exists():
-            if exec_proc.returncode != 0:
-                _fail("Execute entrypoint crashed (no output file)")
-                _info(exec_proc.stderr.strip() or exec_proc.stdout.strip())
-                return EXIT_GENERAL
-            else:
-                _fail("Execute entrypoint produced no output")
-                return EXIT_MALFORMED
-
-        outcome = json.loads(result_file.read_text(encoding="utf-8"))
-
-        # Coordinator crash produces structured error JSON without 'result' key
-        if exec_proc.returncode != 0 and "error" in outcome and "result" not in outcome:
-            error_type = outcome.get("error_type", "unknown")
-            message = outcome.get("message", "execution failed")
-            partial_run_id = outcome.get("partial_run_id")
-            if opts["json"]:
-                print(json.dumps({
-                    "error": outcome.get("error", "execution_failure"),
-                    "error_type": error_type,
-                    "message": message,
-                    "partial_run_id": partial_run_id,
-                }, indent=2))
-            else:
-                _fail(f"Execution failed — {error_type}")
-                _info(message)
-                if partial_run_id:
-                    from operator_console.runs import runs_root
-                    _info(f"partial artifacts: {runs_root() / partial_run_id}")
-            return EXIT_GENERAL
-
-    exec_result = outcome.get("result", {})
-    run_id = exec_result.get("run_id", "?")
-    status = exec_result.get("status", "unknown")
-    success = exec_result.get("success", False)
-    executed = outcome.get("executed", False)
-    failure_category = exec_result.get("failure_category")
-
-    from operator_console.runs import runs_root
-    artifacts_dir = runs_root() / run_id
-
-    # Determine exit code from execution result
-    if not executed:
-        # Policy gate blocked execution
-        exit_code = EXIT_POLICY_BLOCKED
-    elif success:
-        exit_code = EXIT_SUCCESS
-    else:
-        # Map failure_category to a specific exit code
-        exit_code = _FAILURE_CATEGORY_EXIT.get(failure_category or "unknown", EXIT_BACKEND_FAILURE)
+    print()
+    queue_file = submit(
+        goal=goal,
+        task_type=task_type,
+        repo_name=repo_name,
+        repo_path=repo_path,
+        priority=opts["priority"],
+        source="operator",
+    )
 
     if opts["json"]:
+        import json
         print(json.dumps({
-            "run_id": run_id,
-            "status": status,
-            "success": success,
-            "executed": executed,
-            "lane": lane,
-            "backend": backend,
-            "failure_category": failure_category,
-            "artifacts_dir": str(artifacts_dir),
-            "exit_code": exit_code,
+            "queued": True,
+            "file": str(queue_file),
+            "repo": repo_name,
+            "task_type": task_type,
+            "goal": goal,
         }, indent=2))
-        return exit_code
-
-    if executed and success:
-        _tag("Done", _c(f"status={status}", "GRN"))
-    elif executed and not success:
-        _warn(f"Backend ran but failed — status={status}  category={failure_category}")
-        _info("This is expected when the backend binary is not installed on this machine.")
     else:
-        policy_notes = outcome.get("policy_decision", {}).get("notes", "")
-        _warn(f"Execution skipped by policy gate — status={status}")
-        if policy_notes:
-            _info(f"policy: {policy_notes}")
+        _ok(f"queued  {_c(repo_name, 'B')}  {_c(task_type, 'CYN')}  {_c(repr(goal), 'DIM')}")
+        _info(f"queue: {queue_file}")
+        _info("OperationsCenter intake will pick this up and elaborate it")
+        print()
 
-    print()
-    print(f"  {_c('Run ID    ', 'DIM')} {_c(run_id, 'B')}")
-    print(f"  {_c('Artifacts ', 'DIM')} {_c(str(artifacts_dir), 'DIM')}")
-    print()
-
-    return exit_code
+    return 0

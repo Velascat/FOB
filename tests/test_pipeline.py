@@ -260,28 +260,25 @@ class TestDelegateArgParsing:
         assert opts["goal"] == "Fix lint"
 
     def test_task_type_default(self):
-        assert self._parse([])["task_type"] == "documentation"
+        assert self._parse([])["task_type"] is None
 
     def test_task_type_override(self):
-        opts = self._parse(["--task-type", "lint_fix"])
-        assert opts["task_type"] == "lint_fix"
-
-    def test_dry_run_flag(self):
-        assert self._parse(["--dry-run"])["dry_run"] is True
+        opts = self._parse(["--task-type", "bug"])
+        assert opts["task_type"] == "bug"
 
     def test_json_flag(self):
         assert self._parse(["--json"])["json"] is True
 
-    def test_repo_key_default(self):
-        assert self._parse([])["repo_key"] == "default"
+    def test_repo_override(self):
+        opts = self._parse(["--repo", "myrepo"])
+        assert opts["repo"] == "myrepo"
 
-    def test_repo_key_override(self):
-        opts = self._parse(["--repo-key", "myrepo"])
-        assert opts["repo_key"] == "myrepo"
+    def test_priority_default(self):
+        assert self._parse([])["priority"] == "normal"
 
-    def test_task_id_override(self):
-        opts = self._parse(["--task-id", "my-task-123"])
-        assert opts["task_id"] == "my-task-123"
+    def test_priority_override(self):
+        opts = self._parse(["--priority", "high"])
+        assert opts["priority"] == "high"
 
 
 # ---------------------------------------------------------------------------
