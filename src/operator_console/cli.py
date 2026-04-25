@@ -421,8 +421,8 @@ def _require_zellij() -> None:
         sys.exit(1)
 
 
-def _run_brief(profiles: list[dict], use_saved_layout: bool = False, tab_name: str | None = None) -> None:
-    """Core brief flow shared by `console open`, `console multi`, and `console context`."""
+def _run_open(profiles: list[dict], use_saved_layout: bool = False, tab_name: str | None = None) -> None:
+    """Core launch flow shared by `console open`, `console multi`, and `console context`."""
     from operator_console.profile_loader import load_profile
     from operator_console.launcher import launch, CONSOLE_SESSION
     from operator_console.bootstrap import ensure_claude_md, write_bootstrap_file
@@ -477,7 +477,7 @@ def _run_brief(profiles: list[dict], use_saved_layout: bool = False, tab_name: s
     session_running = already_in or _sess_exists(CONSOLE_SESSION)
 
     label = ", ".join(p["name"] for p in profiles)
-    print(c(f"\n  Brief: {label}", "B", "CYN"))
+    print(c(f"\n  Open: {label}", "B", "CYN"))
     if session_running:
         print(f"  {c('session  ', 'DIM')}attaching  {c(f'({CONSOLE_SESSION})', 'DIM')}")
     else:
@@ -492,10 +492,10 @@ def _run_brief(profiles: list[dict], use_saved_layout: bool = False, tab_name: s
     if profiles:
         _ap = Path(profiles[0]["repo_root"]) / ".console" / "task.md"
         if _ap.exists():
-            from operator_console.commands import _mission_snippet
-            snip = _mission_snippet(_ap)
+            from operator_console.commands import _task_snippet
+            snip = _task_snippet(_ap)
             if snip:
-                print(f"  {c('mission  ', 'DIM')}{c(snip, 'DIM')}")
+                print(f"  {c('task     ', 'DIM')}{c(snip, 'DIM')}")
     print()
     launch(profiles, CONSOLE_DIR, saved_layout_path=saved_layout_path, tab_name=tab_name)
 
@@ -524,7 +524,7 @@ def main() -> None:
         case "help":
             show_help(args)
 
-        case "open" | "brief":
+        case "open":
             _require_zellij()
             use_saved_layout = "--layout" in args
             named = [a for a in args if not a.startswith("--")]
@@ -546,12 +546,12 @@ def main() -> None:
                         sys.exit(1)
             else:
                 profiles, tab_name = _autopick()
-            _run_brief(profiles, use_saved_layout=use_saved_layout, tab_name=tab_name)
+            _run_open(profiles, use_saved_layout=use_saved_layout, tab_name=tab_name)
 
         case "multi":
             _require_zellij()
             profiles, tab_name = _pick_multi(all="--all" in args)
-            _run_brief(profiles, use_saved_layout=False, tab_name=tab_name)
+            _run_open(profiles, use_saved_layout=False, tab_name=tab_name)
 
         case "kill":
             commands.cmd_kill(args)
@@ -582,7 +582,7 @@ def main() -> None:
             if not profiles:
                 print(c("  No restorable repos found.", "RED"))
                 sys.exit(1)
-            _run_brief(profiles)
+            _run_open(profiles)
 
         case "save":
             commands.cmd_save(args, _profile_for_cwd(), CONSOLE_DIR)

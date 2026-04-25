@@ -1,4 +1,4 @@
-// brief.kdl — reference layout (do not use directly)
+// default.kdl — reference layout (do not use directly)
 // The launcher generates a runtime version of this at launch time.
 // See: src/operator_console/launcher.py  generate_session_layout()
 //

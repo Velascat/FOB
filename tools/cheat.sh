@@ -23,7 +23,7 @@ BANNER
 echo -e "${R}"
 
 sec "OperatorConsole WORKSPACE"
-CMD "console [brief] [repo]"       "launch — auto-selects current repo"
+CMD "console [open] [repo]"        "launch — auto-selects current repo"
 CMD "console multi"                "multi-select picker — open several repos"
 CMD "console restore [--show]"     "re-open last saved session group"
 CMD "console rewatch [profiles…]"  "restart git watcher for this tab's profile"
@@ -31,8 +31,8 @@ CMD "console attach"               "re-attach to running console session"
 CMD "console kill"                 "terminate session + all panes"
 echo
 CMD "console status [--all]"       "session, layout, branch, .console/ state"
-CMD "console resume"               "print Claude mission brief"
-CMD "console init [repo]"          "initialize .console/ mission files"
+CMD "console resume"               "print Claude startup context"
+CMD "console init [repo]"          "initialize .console/ context files"
 CMD "console test / console audit"     "run project tests / audit"
 CMD "console doctor"               "check all dependencies"
 CMD "console loadout"              "install / update dev tools"
@@ -42,7 +42,7 @@ sec "RESET & LAYOUT"
 CMD "console reset"                "full reset — session + layout + state"
 CMD "console reset --session"      "kill session only"
 CMD "console reset --layout"       "clear saved layout only"
-CMD "console reset --state"        "delete .console/ mission files only"
+CMD "console reset --state"        "delete .console/ context files only"
 CMD "console layout save/load"     "save or restore workspace layout"
 echo
 

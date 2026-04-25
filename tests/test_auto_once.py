@@ -60,7 +60,7 @@ class TestObserveArgPriority:
         ctx = self._observe("--goal", "g", "--clone-url", "https://example.com/repo.git")
         assert ctx["clone_url"] == "https://example.com/repo.git"
 
-    def test_default_goal_used_when_no_flag_no_mission(self):
+    def test_default_goal_used_when_no_flag_no_task(self):
         ctx = self._observe()
         assert ctx["goal"] == _DEFAULT_GOAL
 
@@ -73,7 +73,7 @@ class TestObserveArgPriority:
         assert ctx["clone_url"] == _DEFAULT_CLONE_URL
 
 
-class TestObserveMissionFile:
+class TestObserveTaskFile:
     """task.md is read when no --goal flag is given."""
 
     def test_reads_objective_section(self, tmp_path):
@@ -100,17 +100,17 @@ class TestObserveMissionFile:
         assert ctx["goal"] == _DEFAULT_GOAL
         assert ctx["source"] == "default"
 
-    def test_missing_mission_file_uses_default(self, tmp_path):
+    def test_missing_task_file_uses_default(self, tmp_path):
         with patch("operator_console.observer._find_repo_root", return_value=tmp_path), \
              patch("operator_console.observer._git_remote_url", return_value=None):
             ctx = observe([])
         assert ctx["goal"] == _DEFAULT_GOAL
 
-    def test_flag_overrides_mission_file(self, tmp_path):
+    def test_flag_overrides_task_file(self, tmp_path):
         console_dir = tmp_path / ".console"
         console_dir.mkdir()
         (console_dir / "task.md").write_text(
-            "## Objective\n\nMission goal.\n"
+            "## Objective\n\nRefactor the auth layer.\n"
         )
         with patch("operator_console.observer._find_repo_root", return_value=tmp_path), \
              patch("operator_console.observer._git_remote_url", return_value=None):
@@ -135,7 +135,7 @@ class TestObserveRepoKey:
         assert ctx["clone_url"] == "https://github.com/acme/widget.git"
 
 
-class TestReadMissionGoal:
+class TestReadTaskGoal:
     """_read_mission_goal unit tests."""
 
     def test_returns_none_when_no_file(self, tmp_path):
@@ -209,11 +209,11 @@ class TestAutoOnce:
         idx = delegate_args.index("--task-type")
         assert delegate_args[idx + 1] == "lint_fix"
 
-    def test_uses_mission_goal_when_no_flag(self, tmp_path):
+    def test_uses_task_goal_when_no_flag(self, tmp_path):
         console_dir = tmp_path / ".console"
         console_dir.mkdir()
         (console_dir / "task.md").write_text(
-            "## Objective\n\nMission-driven goal.\n"
+            "## Objective\n\nRefactor the routing layer.\n"
         )
         with patch("operator_console.delegate.run_delegate", return_value=0) as mock_del, \
              patch("operator_console.observer._find_repo_root", return_value=tmp_path), \
@@ -222,9 +222,9 @@ class TestAutoOnce:
             run_auto_once([])
         delegate_args = mock_del.call_args[0][0]
         idx = delegate_args.index("--goal")
-        assert delegate_args[idx + 1] == "Mission-driven goal."
+        assert delegate_args[idx + 1] == "Refactor the routing layer."
 
-    def test_uses_default_goal_when_no_flag_no_mission(self):
+    def test_uses_default_goal_when_no_flag_no_task(self):
         from operator_console.observer import _DEFAULT_GOAL
         with patch("operator_console.delegate.run_delegate", return_value=0) as mock_del, \
              patch("operator_console.observer._find_repo_root", return_value=Path("/tmp")), \

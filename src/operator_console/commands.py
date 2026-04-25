@@ -51,7 +51,7 @@ def cmd_init(args: list[str], console_dir: Path) -> None:
     from operator_console.bootstrap import ensure_claude_md
     ensure_claude_md(repo_root, templates_dir)
 
-    print(c("Initialized .console/ mission files", "B"))
+    print(c("Initialized .console/ context files", "B"))
     print(f"  Repo: {repo_root}")
     print()
     for name in created:
@@ -96,8 +96,8 @@ def cmd_status(
             tab_mark    = c("tab ✓", "GRN") if s["tab_open"]    else c("tab –", "DIM")
             layout_mark = c("layout ✓", "GRN") if s["layout_saved"] else c("layout –", "DIM")
             name_col    = c(s["name"], "B") + " " * (col_w - len(s["name"]))
-            mission     = c(s["mission_snippet"], "DIM") if s["mission_snippet"] else c("—", "DIM")
-            print(f"  {init_mark}  {name_col}  {branch_str:<20}  {tab_mark}  {layout_mark}  {mission}")
+            task_snip   = c(s["task_snippet"], "DIM") if s["task_snippet"] else c("—", "DIM")
+            print(f"  {init_mark}  {name_col}  {branch_str:<20}  {tab_mark}  {layout_mark}  {task_snip}")
         print()
         return
 
@@ -144,7 +144,7 @@ def cmd_status(
         print(f"  {c('layout      ', 'DIM')} {c('none saved', 'DIM')}  {c('(run: console layout save)', 'DIM')}")
     print()
 
-    # Mission files + active mission snippet
+    # Context files + current task snippet
     claude_dir = repo_root / ".console"
     if claude_dir.exists():
         print(f"  {c('.console/', 'DIM')}")
@@ -152,18 +152,18 @@ def cmd_status(
             p = claude_dir / name
             mark = c("✓", "GRN") if p.exists() else c("✗", "DIM")
             print(f"    {mark}  {name}")
-        mission_path = claude_dir / "task.md"
-        if mission_path.exists():
-            snippet = _mission_snippet(mission_path)
+        task_path = claude_dir / "task.md"
+        if task_path.exists():
+            snippet = _task_snippet(task_path)
             if snippet:
-                print(f"\n  {c('mission     ', 'DIM')} {c(snippet, 'DIM')}")
+                print(f"\n  {c('task        ', 'DIM')} {c(snippet, 'DIM')}")
     else:
         print(c("  ✗  .console/ not initialized — run: console init", "YLW"))
     print()
 
 
-def _mission_snippet(path: Path, max_len: int = 60) -> str:
-    """Return first non-empty, non-heading line from a mission file."""
+def _task_snippet(path: Path, max_len: int = 60) -> str:
+    """Return first non-empty, non-heading line from a task file."""
     try:
         for line in path.read_text().splitlines():
             stripped = line.strip()
@@ -172,6 +172,10 @@ def _mission_snippet(path: Path, max_len: int = 60) -> str:
     except Exception:
         pass
     return ""
+
+
+# Keep backward-compatible alias used by cli.py and tests
+_task_snippet = _task_snippet
 
 
 # ── resume ────────────────────────────────────────────────────────────────────
@@ -402,7 +406,7 @@ def cmd_update(args: list[str]) -> None:
 # ── reset ────────────────────────────────────────────────────────────────────
 
 def cmd_reset(args: list[str], default_profile: dict | None, console_dir: Path) -> None:
-    """Reset OperatorConsole state — session, layout, and/or mission files."""
+    """Reset OperatorConsole state — session, layout, and/or context files."""
     import os
     from operator_console.launcher import CONSOLE_SESSION
     from operator_console.session import session_exists as _session_exists
@@ -428,7 +432,7 @@ def cmd_reset(args: list[str], default_profile: dict | None, console_dir: Path) 
             if (repo_root / ".console" / n).exists()
         ]
         if present:
-            actions.append(("state", f"delete .console/ mission files ({len(present)} files)"))
+            actions.append(("state", f"delete .console/ context files ({len(present)} files)"))
 
     if not actions:
         print(c("  Nothing to reset.", "DIM"))
@@ -464,17 +468,17 @@ def cmd_reset(args: list[str], default_profile: dict | None, console_dir: Path) 
             print(c(f"  ✓ layout   cleared ({len(deleted)} file(s))", "GRN"))
 
     if do_state:
-        mission_files = [
+        context_files = [
             "task.md", "guidelines.md", "backlog.md", "log.md"
         ]
         removed = 0
-        for name in mission_files:
+        for name in context_files:
             p = repo_root / ".console" / name
             if p.exists():
                 p.unlink()
                 removed += 1
         if removed:
-            print(c(f"  ✓ state    deleted {removed} mission file(s)", "GRN"))
+            print(c(f"  ✓ state    deleted {removed} context file(s)", "GRN"))
             print(c(f"    Run `console init` or `console open` to reinitialize.", "DIM"))
     print()
 
@@ -488,7 +492,7 @@ def _repo_snapshot(profile: dict, tab_open: bool) -> dict:
     branch = get_branch(repo_root)
     console_init = (repo_root / ".console").exists()
     layout_res = layout_mod.load_any(repo_root) if console_init else None
-    mission = _mission_snippet(repo_root / ".console" / "task.md") if console_init else ""
+    task_snip = _task_snippet(repo_root / ".console" / "task.md") if console_init else ""
     return {
         "name":             profile["name"],
         "repo_root":        str(repo_root),
@@ -497,7 +501,7 @@ def _repo_snapshot(profile: dict, tab_open: bool) -> dict:
         "branch":           branch or "unknown",
         "branch_protected": branch in PROTECTED_BRANCHES if branch else False,
         "layout_saved":     layout_res is not None,
-        "mission_snippet":  mission,
+        "task_snippet":  task_snip,
     }
 
 
@@ -544,12 +548,12 @@ def cmd_map(
             branch_str  = c(s["branch"] + " ⚠", "YLW") if s["branch_protected"] else s["branch"]
             init_mark   = c("●", "GRN") if s["console_initialized"] else c("⚠", "YLW")
             print(f"\n  {init_mark}  {c(s['name'], 'B'):<22} {branch_str:<18} {tab_mark}  {layout_mark}")
-            if s["mission_snippet"]:
-                print(f"     {c(s['mission_snippet'], 'DIM')}")
+            if s["task_snippet"]:
+                print(f"     {c(s['task_snippet'], 'DIM')}")
             elif not s["console_initialized"]:
                 print(f"     {c('(not initialized — run: console init)', 'DIM')}")
             else:
-                print(f"     {c('(no active mission)', 'DIM')}")
+                print(f"     {c('(no current task)', 'DIM')}")
         print()
         print(hr())
         print(f"  {c('●', 'GRN')} console initialized  "
@@ -568,8 +572,8 @@ def cmd_map(
     layout_res = layout_mod.load_any(repo_root)
 
     console_state_dir = repo_root / ".console"
-    mission_files = ["task.md", "guidelines.md", "backlog.md", "log.md", ".context"]
-    mission_state = {n: (console_state_dir / n).exists() for n in mission_files}
+    context_files = ["task.md", "guidelines.md", "backlog.md", "log.md", ".context"]
+    context_state = {n: (console_state_dir / n).exists() for n in context_files}
 
     if use_json:
         data = {
@@ -586,7 +590,7 @@ def cmd_map(
                 }
                 if layout_res else {"saved": False}
             ),
-            "mission_files": mission_state,
+            "context_files": context_state,
         }
         print(_json.dumps(data, indent=2))
         return
@@ -624,8 +628,8 @@ def cmd_map(
         row("saved", c("none", "DIM") + f"  {c('(run: console layout save)', 'DIM')}")
     print()
 
-    print(c("  mission (.console/)", "B"))
-    for name, exists in mission_state.items():
+    print(c("  context (.console/)", "B"))
+    for name, exists in context_state.items():
         mark  = c("✓", "GRN") if exists else c("✗", "DIM")
         label = name + ("  (compiled)" if name == ".context" else "")
         print(f"    {mark}  {c(label, 'DIM') if not exists else label}")
@@ -787,7 +791,7 @@ def cmd_save(args: list[str], default_profile: dict | None, console_dir: Path) -
         if kdl_path.exists():
             kdl_path.unlink()
             print(c(f"  ✓ removed  {kdl_path.name}", "GRN"))
-            print(c(f"  Layout will be generated from YAML on next brief.", "DIM"))
+            print(c(f"  Layout will be generated from YAML on next open.", "DIM"))
         else:
             print(c(f"  No saved layout for '{profile_name}'.", "DIM"))
         return

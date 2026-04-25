@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OperatorConsole shell pane welcome — shows on brief launch
+# OperatorConsole shell pane welcome — shows on launch
 
 R='\033[0m'; B='\033[1m'; DIM='\033[2m'
 GRN='\033[32m'; YLW='\033[33m'; CYN='\033[36m'; RED='\033[31m'
@@ -41,7 +41,7 @@ hr
 echo -e "  ${B}QUICK REFERENCE${R}"
 hr
 printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "console status"    "situation report"
-printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "console resume"    "claude mission brief"
+printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "console resume"    "claude startup context"
 printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "console test"      "run project tests"
 printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "console loadout"   "install / update dev tools"
 printf "  ${CYN}%-18s${R} ${DIM}%s${R}\n" "console cheat"     "open full cheatsheet"

@@ -19,12 +19,12 @@ console
 
 Claude operates as an AI operator inside the workspace. The expected loop:
 
-1. **Read mission files** — Claude reads `.console/` to understand current context
+1. **Read context files** — Claude reads `.console/` to understand current context
 2. **Summarize plan** — Claude describes what it intends to do before any edits
 3. **Edit** — targeted changes, not rewrites
 4. **Validate** — run `console test` or `console audit`
 5. **Summarize result** — what changed, what passed or failed
-6. **Update mission files** — Claude updates `.console/backlog.md` and `.console/log.md`
+6. **Update context files** — Claude updates `.console/backlog.md` and `.console/log.md`
 
 This loop is described in `.console/guidelines.md` in each repo.
 
@@ -49,7 +49,7 @@ These are stable entrypoints. Claude should use them rather than constructing lo
 
 Intended writable scope for Claude:
 - The configured `repo_root` and its children
-- `<repo>/.console/` for mission file updates
+- `<repo>/.console/` for context file updates
 - `/tmp/` for transient files
 
 Claude should not write outside `repo_root` without explicit operator confirmation.

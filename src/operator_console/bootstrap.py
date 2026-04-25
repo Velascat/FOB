@@ -1,12 +1,12 @@
-"""Generate Claude briefing from repo-local .console/ state files."""
+"""Generate Claude context from repo-local .console/ state files."""
 from __future__ import annotations
 import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
 
-# Ordered sections in the briefing — label maps to filename
-BRIEFING_SECTIONS = [
+# Ordered sections in the context — label maps to filename
+CONTEXT_SECTIONS = [
     ("task.md",   "Task"),
     ("guidelines.md",    "Guidelines"),
     ("backlog.md",    "Backlog"),
@@ -45,7 +45,7 @@ def build_resume_prompt(
         files_to_read = [(Path(f).name, Path(f).name.replace(".md", "").replace("-", " ").title())
                          for f in files]
     else:
-        files_to_read = list(BRIEFING_SECTIONS)
+        files_to_read = list(CONTEXT_SECTIONS)
 
     for filename, label in files_to_read:
         path = console_dir / filename
@@ -66,8 +66,8 @@ def build_resume_prompt(
 
     if not sections:
         return (
-            "No .console/ mission files found.\n"
-            "Run: console init  to initialize mission files for this repo."
+            "No .console/ context files found.\n"
+            "Run: console init  to initialize context files for this repo."
         )
 
     repo_root = repo_root.resolve()
@@ -85,7 +85,7 @@ def build_resume_prompt(
     sections.append(runtime)
 
     header = (
-        f"# OperatorConsole Briefing — {repo_root.name}\n\n"
+        f"# OperatorConsole Context — {repo_root.name}\n\n"
         f"_Generated {timestamp} · Branch: {branch}{profile_str}_\n\n"
         "This is your compiled startup context. Read it before acting.\n"
         "The source files in `.console/` are the editable truth — this file is generated.\n\n"
@@ -276,19 +276,19 @@ def ensure_claude_md(
         standard = {"guidelines.md", "task.md", "backlog.md", "log.md"}
         extras = [Path(f).name for f in extra_files if Path(f).name not in standard]
         if extras:
-            extra_lines = "\nAdditional context files also compiled into the briefing:\n" + \
+            extra_lines = "\nAdditional context files also compiled into the startup context:\n" + \
                 "\n".join(f"- `.console/{name}`" for name in extras) + "\n"
 
     block = f"""{marker}
-## OperatorConsole Briefing
+## OperatorConsole Context
 
-At the start of each session, read the compiled briefing before acting:
+At the start of each session, read the compiled context before acting:
 
 - `.console/.context` — compiled startup context (generated fresh each launch)
 
 The context file contains your current task, guidelines, backlog, log, and runtime context.
 {extra_lines}
-**Source files** (editable truth — update these, not the briefing):
+**Source files** (editable truth — update these, not the context file):
 
 | File | Role |
 |------|------|
@@ -298,7 +298,7 @@ The context file contains your current task, guidelines, backlog, log, and runti
 | `.console/log.md` | Recent decisions, stop points, what changed and why |
 
 After meaningful progress, update `.console/backlog.md` and `.console/log.md`.
-Do not edit `.console/.context` directly — it is overwritten at each launch.
+Do not edit `.console/.context` directly — it is regenerated at each launch.
 """
     if claude_md.exists():
         existing = claude_md.read_text()

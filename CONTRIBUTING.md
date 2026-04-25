@@ -1,6 +1,6 @@
 # Contributing to OperatorConsole
 
-OperatorConsole is a local operator console for Claude-driven development — a Zellij session manager with mission-file continuity and an execution pipeline that delegates to OperationsCenter.
+OperatorConsole is a local operator console for Claude-driven development — a Zellij session manager with context-file continuity and an execution pipeline that delegates to OperationsCenter.
 
 ## Before You Start
 

@@ -38,7 +38,7 @@ claude:
     - .console/log.md
     # - .console/extra-context.md            # Add project-specific files here
   peers: []                              # Other profile names to pull context from
-    # - operations_center                     # Includes that repo's active-mission + objectives
+    # - operations_center                     # Includes that repo's task and backlog
 
 panes:
   git:
@@ -126,7 +126,7 @@ When multiple repos are selected in a single `console open` run, each repo's `.c
 ```yaml
 claude:
   peers:
-    - operations_center    # Claude sees OperationsCenter's current mission + objectives
+    - operations_center    # Claude sees OperationsCenter's current task + backlog
 ```
 
 ## Layout Persistence
@@ -177,7 +177,7 @@ claude:
     - .console/log.md
     - .console/agent-boundaries.md    # OperationsCenter-specific rules
   peers:
-    - console                         # pulls OperatorConsole's mission context
+    - console                         # pulls OperatorConsole's task context
 
 panes:
   logs:

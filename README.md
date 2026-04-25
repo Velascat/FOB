@@ -235,7 +235,7 @@ First run (no existing session):
 $ cd ~/Documents/GitHub/YourRepo
 $ console
 
-  Brief: YourRepo
+  Open: YourRepo
   session  creating   (console)
   layout   fresh
   task     implement feature X…
@@ -248,7 +248,7 @@ Returning to an existing session:
 ```
 $ console
 
-  Brief: YourRepo
+  Open: YourRepo
   session  attaching  (console)
   task     implement feature X…
 
