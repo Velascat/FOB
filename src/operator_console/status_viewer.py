@@ -1,14 +1,14 @@
 """Status pane viewer: runs operations-center status in a managed terminal loop.
 
-cp-status.py uses Rich console.clear() in a while-True/2s loop, which dumps
+oc-status.py uses Rich console.clear() in a while-True/2s loop, which dumps
 content to Zellij's scrollback on every cycle → infinite scroll.  Fix: run the
 subprocess inside alternate screen so its output has no scrollback buffer.
 
-On Ctrl+C the child (cp-status.py) receives SIGINT and exits; the parent
+On Ctrl+C the child (oc-status.py) receives SIGINT and exits; the parent
 ignores it (preexec_fn restores SIG_DFL in the child so it works normally).
 After the child exits we disable mouse modes and drop back to the main screen.
 
-Usage: python3 -m operator_console.status_viewer <cp-script> [extra args...]
+Usage: python3 -m operator_console.status_viewer <oc-script> [extra args...]
 """
 from __future__ import annotations
 import signal
@@ -41,7 +41,7 @@ def _restore_sigint() -> None:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("usage: python3 -m operator_console.status_viewer <cp-script> [args...]")
+        print("usage: python3 -m operator_console.status_viewer <oc-script> [args...]")
         sys.exit(1)
 
     cp_script = sys.argv[1]

@@ -41,7 +41,7 @@ Left 28%: lazygit (top) + OperationsCenter status script (bottom 25%). Center 44
 │ lazygit  │                         │  shell-A ▸       │
 │  repo-A  │  claude / codex / aider │  shell-B ▸  (75%)│
 │ lazygit  │      (GitHub/)          ├──────────────────┤
-│  repo-B  │                         │  cp-status  (25%)│
+│  repo-B  │                         │  oc-status  (25%)│
 │   ...  ▸ │                         │                  │
 └──────────┴─────────────────────────┴──────────────────┘
 ```

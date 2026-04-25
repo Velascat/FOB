@@ -13,11 +13,11 @@ from operator_console.bootstrap import get_claude_command, get_codex_command
 
 CONSOLE_SESSION = "operator_console"
 _GITHUB_DIR = Path.home() / "Documents" / "GitHub"
-_CP_STATUS  = _GITHUB_DIR / "OperationsCenter" / "scripts" / "operations-center.sh"
+_OC_STATUS  = _GITHUB_DIR / "OperationsCenter" / "scripts" / "operations-center.sh"
 
 _C = {"R": "\033[0m", "DIM": "\033[2m", "GRN": "\033[32m", "YLW": "\033[33m"}
 
-def _status_viewer_cmd(cp_status_raw: str, status_arg: str, key: str = "default") -> str:
+def _status_viewer_cmd(oc_status_raw: str, status_arg: str, key: str = "default") -> str:
     """Write a restart-loop launch script for the status viewer and return the bash command.
 
     Uses operator_console.status_viewer (mirrors git_watcher): clears screen, runs status,
@@ -35,7 +35,7 @@ def _status_viewer_cmd(cp_status_raw: str, status_arg: str, key: str = "default"
     script_path.write_text(
         "#!/usr/bin/env bash\n"
         f"while true; do\n"
-        f"    python3 -m operator_console.status_viewer '{cp_status_raw}'{viewer_extra}\n"
+        f"    python3 -m operator_console.status_viewer '{oc_status_raw}'{viewer_extra}\n"
         f"    sleep 1\n"
         f"done\n"
     )
@@ -72,7 +72,7 @@ def _single_pane_block(
 
     claude_cmd   = get_claude_command(profile, Path(repo), console_dir=console_dir, claude_cwd=claude_cwd)
     codex_cmd    = get_codex_command(profile, Path(repo), console_dir=console_dir)
-    status_cmd   = _status_viewer_cmd(str(_CP_STATUS), status_arg, key=profile.get("name", "single"))
+    status_cmd   = _status_viewer_cmd(str(_OC_STATUS), status_arg, key=profile.get("name", "single"))
 
     return (
         f'{i}pane split_direction="vertical" {{\n'
@@ -166,7 +166,7 @@ def _multi_pane_block(
         "",
     )
     status_arg = f" --repo '{_repo_filter}'" if _repo_filter else ""
-    status_cmd = _status_viewer_cmd(str(_CP_STATUS), status_arg, key=session_key)
+    status_cmd = _status_viewer_cmd(str(_OC_STATUS), status_arg, key=session_key)
 
     right_block = (
         f'{i}    pane size="28%" {{\n'
