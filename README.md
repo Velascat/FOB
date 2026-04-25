@@ -6,7 +6,7 @@ Operator console for Claude-driven development. Persistent Zellij workspaces wit
 
 OperatorConsole maintains a persistent workspace that you can leave and return to without losing context.
 
-- **Session persistence** — a single named Zellij session (`console`) stays alive across terminal closes and reconnects; `console brief` attaches to it or creates it
+- **Session persistence** — a single named Zellij session (`console`) stays alive across terminal closes and reconnects; `console open` attaches to it or creates it
 - **Context persistence** — `.console/` mission files give Claude structured, explicit context that survives across sessions
 - **Layout persistence** — `console save` captures the live Zellij tab layout per profile; `console layout save/load` for explicit KDL-based restore
 - **Auto-discovery** — every git repo under `~/Documents/GitHub/` appears in the picker automatically; no YAML required
@@ -94,14 +94,14 @@ Create a group profile to open multiple repos as a single tab in one step:
 # config/profiles/platform.yaml
 name: platform
 group:
-  - controlplane
-  - console
+  - operations_center
+  - operator_console
   - switchboard
   - workstation
 ```
 
 ```bash
-console brief platform    # opens all four repos in one multi-pane tab
+console open platform    # opens all four repos in one multi-pane tab
 ```
 
 Groups appear in the picker with a `▸` prefix and their member list. Selecting a group expands it into its constituent profiles automatically.
@@ -135,7 +135,7 @@ OperatorConsole state lives in four distinct layers:
 |------|------|
 | `.briefing` | All four files + runtime context compiled into one startup document |
 
-`console resume` prints the current briefing so you can inspect exactly what Claude will see.
+`console context` prints the current briefing so you can inspect exactly what Claude will see.
 
 ## Commands
 
@@ -143,14 +143,14 @@ OperatorConsole state lives in four distinct layers:
 
 | Command | Description |
 |---------|-------------|
-| `console` / `console brief [profile]` | Auto-select current repo and launch |
-| `console brief --layout` | Launch using saved layout (explicit restore) |
+| `console` / `console open [profile]` | Auto-select current repo and launch |
+| `console open --layout` | Launch using saved layout (explicit restore) |
 | `console multi` | Multi-select picker — open several repos as tabs |
 | `console restore` | Re-open last saved session group (`--show` to preview without launching) |
 | `console attach` | Re-attach to running `console` session |
 | `console kill` | Terminate the `console` session and all panes (warns first) |
 | `console init [repo]` | Initialize `.console/` mission files in a repo |
-| `console resume` | Print current mission brief from `.console/` |
+| `console context` | Print current mission brief from `.console/` |
 | `console test` | Run project tests |
 | `console audit` | Run project audit |
 | `console doctor` | Check and install dependencies |
@@ -161,9 +161,9 @@ OperatorConsole state lives in four distinct layers:
 |---------|-------------|
 | `console status` | Session, layout, branch, `.console/` state |
 | `console status --all` | Compact table of all repos |
-| `console map` | Full state snapshot |
-| `console map --all` | Snapshot of all repos |
-| `console map --json` | Machine-readable state (single repo or `--all`) |
+| `console overview` | Full state snapshot |
+| `console overview --all` | Snapshot of all repos |
+| `console overview --json` | Machine-readable state (single repo or `--all`) |
 
 **Reset & Recovery:**
 
@@ -194,7 +194,7 @@ OperatorConsole is a persistent system. Every persistent system needs a clear es
 
 | Command | Description |
 |---------|-------------|
-| `console loadout` | Install and configure dev tools |
+| `console install` | Install and configure dev tools |
 | `console cheat` | Open keybinding reference |
 | `console install` | Symlink `console` to `~/.local/bin` |
 
@@ -204,10 +204,10 @@ OperatorConsole is a persistent system. Every persistent system needs a clear es
 |---------|-------------|
 | `console status` | System readiness: SwitchBoard, OperationsCenter, lane binaries, last run |
 | `console status --json` | Machine-readable system readiness |
-| `console delegate --goal TEXT` | Run a task through the full OperationsCenter pipeline |
-| `console delegate --dry-run` | Planning only — print lane decision without executing |
-| `console auto-once` | Single autonomous cycle: observe → propose → decide → execute |
-| `console auto-once --dry-run` | Observe + plan only, no execution |
+| `console run --goal TEXT` | Run a task through the full OperationsCenter pipeline |
+| `console run --dry-run` | Planning only — print lane decision without executing |
+| `console cycle` | Single autonomous cycle: observe → propose → decide → execute |
+| `console cycle --dry-run` | Observe + plan only, no execution |
 | `console last` | Inspect the most recent run (status, lane, artifacts) |
 | `console last --all` | Most recent run + list of recent runs |
 | `console last --json` | Machine-readable last run summary |
@@ -259,21 +259,21 @@ $ console
 
 OperatorConsole handles multiple repos in two complementary ways:
 
-**Group profiles** — define a named group in `config/profiles/<name>.yaml` with a `group:` list. `console brief platform` opens all members as a single multi-pane tab. Groups appear in the picker with `▸` prefix.
+**Group profiles** — define a named group in `config/profiles/<name>.yaml` with a `group:` list. `console open platform` opens all members as a single multi-pane tab. Groups appear in the picker with `▸` prefix.
 
 **Multi-tab** — run `console multi` from anywhere to get the multi-select picker. Tab to select multiple repos; each opens as a named tab in the same `console` session. In multi-repo mode, Claude's working directory starts at `~/Documents/GitHub/` so it can navigate across repos freely.
 
-**Peer context** — when multiple repos are opened together in a single `console brief`, each repo's `.console/.briefing` automatically includes the active mission and objectives of the other selected repos. Claude in each tab sees what the others are working on without any profile config required.
+**Peer context** — when multiple repos are opened together in a single `console open`, each repo's `.console/.briefing` automatically includes the active mission and objectives of the other selected repos. Claude in each tab sees what the others are working on without any profile config required.
 
-For persistent cross-repo awareness (across separate `console brief` invocations), configure peers in a profile:
+For persistent cross-repo awareness (across separate `console open` invocations), configure peers in a profile:
 
 ```yaml
 claude:
   peers:
-    - controlplane   # always pulls OperationsCenter's mission + objectives into this briefing
+    - operations_center   # always pulls OperationsCenter's mission + objectives into this briefing
 ```
 
-**Session groups** — every `console brief` auto-saves the selected repos as the "last group". Re-open the exact same set with:
+**Session groups** — every `console open` auto-saves the selected repos as the "last group". Re-open the exact same set with:
 
 ```bash
 console restore             # re-open last saved group (briefings regenerated fresh)
@@ -284,8 +284,8 @@ console restore --show      # preview what would be restored without launching
 
 ```bash
 console status --all        # one-line summary of every repo: tab, layout, branch, mission
-console map --all           # detailed snapshot of every repo
-console map --all --json    # machine-readable — useful for OperationsCenter delegation
+console overview --all           # detailed snapshot of every repo
+console overview --all --json    # machine-readable — useful for OperationsCenter delegation
 ```
 
 ## Profiles (Optional)
@@ -293,14 +293,14 @@ console map --all --json    # machine-readable — useful for OperationsCenter d
 Repos are auto-discovered — no YAML needed for basic use. Create `config/profiles/<name>.yaml` to configure custom Claude context files, peer repo awareness, custom pane commands, or group multiple repos under one name.
 
 Profile visibility:
-- **Platform group members** (`controlplane`, `console`, `switchboard`, `workstation`, `platform`) are tracked in git
+- **Platform group members** (`operations_center`, `operator_console`, `switchboard`, `workstation`, `platform`) are tracked in git
 - **All other profiles** are gitignored by default — private repos never appear in tracked files
 
 See [docs/profiles.md](docs/profiles.md).
 
 ## Ownership boundary
 
-OperatorConsole owns the operator experience: session management, workspace layout, mission files, and execution pipeline commands (`console delegate`, `console auto-once`, `console last`, `console runs`, `console demo`). OperatorConsole delegates platform lifecycle actions (stack up/down/health) to WorkStation and delegates all planning, routing, and execution to OperationsCenter and SwitchBoard via subprocess.
+OperatorConsole owns the operator experience: session management, workspace layout, mission files, and execution pipeline commands (`console run`, `console cycle`, `console last`, `console runs`, `console demo`). OperatorConsole delegates platform lifecycle actions (stack up/down/health) to WorkStation and delegates all planning, routing, and execution to OperationsCenter and SwitchBoard via subprocess.
 
 OperatorConsole does **not** own service Dockerfiles, compose manifests, routing policy, adapter logic, or contract definitions. Those belong to WorkStation, SwitchBoard, and OperationsCenter respectively. OperatorConsole has no direct imports from any of those repos at runtime.
 
@@ -311,7 +311,7 @@ For the full platform ownership model see `WorkStation/docs/architecture/ownersh
 ## Further Reading
 
 - [docs/architecture.md](docs/architecture.md) — launcher flow, session model, layout persistence internals
-- [docs/cockpit.md](docs/cockpit.md) — execution pipeline commands: delegate, last, status, runs
+- [docs/cockpit.md](docs/cockpit.md) — execution pipeline commands: run, last, status, runs
 - [docs/daily-use.md](docs/daily-use.md) — startup, run, inspect, cleanup, and known limits
 - [docs/demo.md](docs/demo.md) — end-to-end architecture validation walkthrough
 - [docs/profiles.md](docs/profiles.md) — profile format and optional configuration

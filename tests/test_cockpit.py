@@ -318,26 +318,26 @@ class TestSystemStatusModule:
 
 
 def test_runs_module_exists():
-    assert (REPO_ROOT / "src" / "console" / "runs.py").exists()
+    assert (REPO_ROOT / "src" / "operator_console" / "runs.py").exists()
 
 
 def test_last_module_exists():
-    assert (REPO_ROOT / "src" / "console" / "last.py").exists()
+    assert (REPO_ROOT / "src" / "operator_console" / "last.py").exists()
 
 
 def test_delegate_module_exists():
-    assert (REPO_ROOT / "src" / "console" / "delegate.py").exists()
+    assert (REPO_ROOT / "src" / "operator_console" / "delegate.py").exists()
 
 
 def test_system_status_module_exists():
-    assert (REPO_ROOT / "src" / "console" / "system_status.py").exists()
+    assert (REPO_ROOT / "src" / "operator_console" / "system_status.py").exists()
 
 
 def test_cli_dispatches_delegate():
-    text = (REPO_ROOT / "src" / "console" / "cli.py").read_text()
+    text = (REPO_ROOT / "src" / "operator_console" / "cli.py").read_text()
     assert "delegate" in text
 
 
 def test_cli_dispatches_last():
-    text = (REPO_ROOT / "src" / "console" / "cli.py").read_text()
+    text = (REPO_ROOT / "src" / "operator_console" / "cli.py").read_text()
     assert "case \"last\"" in text
