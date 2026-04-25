@@ -32,10 +32,10 @@ status_repos: MyRepo                      # OperationsCenter status filter (empt
 
 claude:
   bootstrap_files:                        # Files fed to Claude at launch (in order)
-    - .console/directives.md             # Omit to use these four defaults
-    - .console/active-task.md
-    - .console/objectives.md
-    - .console/mission-log.md
+    - .console/guidelines.md             # Omit to use these four defaults
+    - .console/task.md
+    - .console/backlog.md
+    - .console/log.md
     # - .console/extra-context.md            # Add project-specific files here
   peers: []                              # Other profile names to pull context from
     # - operations_center                     # Includes that repo's active-mission + objectives
@@ -101,15 +101,15 @@ rm config/profiles/<name>.session
 
 ## Claude Context: bootstrap_files
 
-`bootstrap_files` controls which files are concatenated into `.console/.briefing` at launch. If omitted, the standard four `.console/` files are used. Add extra files for project-specific context:
+`bootstrap_files` controls which files are concatenated into `.console/.context` at launch. If omitted, the standard four `.console/` files are used. Add extra files for project-specific context:
 
 ```yaml
 claude:
   bootstrap_files:
-    - .console/directives.md
-    - .console/active-task.md
-    - .console/objectives.md
-    - .console/mission-log.md
+    - .console/guidelines.md
+    - .console/task.md
+    - .console/backlog.md
+    - .console/log.md
     - .console/api-contracts.md        # project-specific: pipeline I/O spec
 ```
 
@@ -117,11 +117,11 @@ claude:
 
 ### Automatic (multi-select open)
 
-When multiple repos are selected in a single `console open` run, each repo's `.console/.briefing` automatically includes the active mission and objectives of the other selected repos. No profile config needed — it's implicit when repos are opened together.
+When multiple repos are selected in a single `console open` run, each repo's `.console/.context` automatically includes the active mission and objectives of the other selected repos. No profile config needed — it's implicit when repos are opened together.
 
 ### Configured (persistent across sessions)
 
-`peers` lists other profile names. At launch, `active-task.md` and `objectives.md` from each peer repo are appended to the context as `PEER: <name>` sections. Use this when repos are tightly coupled and Claude needs cross-repo awareness on every session, not just when opened together:
+`peers` lists other profile names. At launch, `task.md` and `backlog.md` from each peer repo are appended to the context as `PEER: <name>` sections. Use this when repos are tightly coupled and Claude needs cross-repo awareness on every session, not just when opened together:
 
 ```yaml
 claude:
@@ -171,10 +171,10 @@ status_repos: OperationsCenter
 
 claude:
   bootstrap_files:
-    - .console/directives.md
-    - .console/active-task.md
-    - .console/objectives.md
-    - .console/mission-log.md
+    - .console/guidelines.md
+    - .console/task.md
+    - .console/backlog.md
+    - .console/log.md
     - .console/agent-boundaries.md    # OperationsCenter-specific rules
   peers:
     - console                         # pulls OperatorConsole's mission context

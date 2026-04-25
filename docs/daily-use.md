@@ -43,7 +43,7 @@ console delegate --goal "Fix lint errors in src/" --task-type lint_fix
 console delegate --goal "..." --dry-run
 ```
 
-**Autonomous cycle (reads goal from `.console/active-task.md`):**
+**Autonomous cycle (reads goal from `.console/task.md`):**
 
 ```bash
 console auto-once

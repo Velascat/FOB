@@ -2,7 +2,7 @@
 
 Observe → Propose → Decide → Execute → Record
 
-Reads goal from .console/active-task.md (or --goal override), then drives the
+Reads goal from .console/task.md (or --goal override), then drives the
 full OperationsCenter pipeline via run_delegate(). Canonical run artifacts are
 written to ~/.console/operations_center/runs/<run_id>/ by the execute entrypoint.
 """
@@ -49,7 +49,7 @@ def run_auto_once(args: list[str]) -> int:
     context = observe(args)
 
     if not use_json:
-        source_label = {"arg": "flag", "mission": "active-task.md", "default": "default"}.get(
+        source_label = {"arg": "flag", "file": "task.md", "default": "default"}.get(
             context["source"], context["source"]
         )
         _info(f"goal source: {_c(source_label, 'B')}")

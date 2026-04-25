@@ -4,7 +4,7 @@
 
 OperatorConsole warns when launched from `main` or `master`. This is not a hard block — it's a reminder.
 
-Claude's `directives.md` (in each repo's `.console/`) enforces the actual discipline:
+Claude's `guidelines.md` (in each repo's `.console/`) enforces the actual discipline:
 - Claude will not commit to protected branches
 - Claude will stop and ask for a working branch before making changes
 
@@ -24,9 +24,9 @@ Claude operates as an AI operator inside the workspace. The expected loop:
 3. **Edit** — targeted changes, not rewrites
 4. **Validate** — run `console test` or `console audit`
 5. **Summarize result** — what changed, what passed or failed
-6. **Update mission files** — Claude updates `.console/objectives.md` and `.console/mission-log.md`
+6. **Update mission files** — Claude updates `.console/backlog.md` and `.console/log.md`
 
-This loop is described in `.console/directives.md` in each repo.
+This loop is described in `.console/guidelines.md` in each repo.
 
 ## Helper Commands
 

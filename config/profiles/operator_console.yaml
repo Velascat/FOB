@@ -9,10 +9,10 @@ status_repos: ""  # show all OperationsCenter-tracked repos
 claude:
   continue: true
   bootstrap_files:
-    - .console/directives.md
-    - .console/active-task.md
-    - .console/objectives.md
-    - .console/mission-log.md
+    - .console/guidelines.md
+    - .console/task.md
+    - .console/backlog.md
+    - .console/log.md
   peers: []
 
 panes:

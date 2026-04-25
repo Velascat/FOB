@@ -54,7 +54,7 @@ def show_menu(_: list[str]) -> None:
     options = [
         ("open",    "pick and launch a workspace"),
         ("restore", "re-open last session group"),
-        ("context", "print mission brief"),
+        ("context", "print context from .console/"),
         ("rewatch", "restart git watcher for this tab's profile"),
         ("status",  "repo, branch, session state"),
         ("run",        "run a task through the full execution pipeline"),
@@ -139,7 +139,7 @@ def show_help(_: list[str]) -> None:
             ("reset",             "Full reset — session + layout + state (confirms first)"),
             ("reset --session",   "Kill session only"),
             ("reset --layout",    "Clear saved layout only"),
-            ("reset --state",     "Delete .console/ mission files only"),
+            ("reset --state",     "Delete .console/ state files only"),
             ("clear [--all]",     "Delete saved layout (current repo or all)"),
         ]),
         ("LAYOUT", [
@@ -458,10 +458,10 @@ def _run_brief(profiles: list[dict], use_saved_layout: bool = False, tab_name: s
                              peer_roots=peer_roots or None, profile_name=profile["name"])
         extra_files = [f for f in (bootstrap_files or [])
                        if Path(f).name not in {
-                           "directives.md", "active-task.md",
-                           "objectives.md", "mission-log.md",
+                           "guidelines.md", "task.md",
+                           "backlog.md", "log.md",
                        }]
-        ensure_claude_md(repo_root, CONSOLE_DIR / "templates" / "mission",
+        ensure_claude_md(repo_root, CONSOLE_DIR / "templates" / "console",
                          extra_files=extra_files or None)
 
     _sg_save([p["name"] for p in profiles], CONSOLE_SESSION)
@@ -490,7 +490,7 @@ def _run_brief(profiles: list[dict], use_saved_layout: bool = False, tab_name: s
             layout_desc = c("fresh", "DIM")
         print(f"  {c('layout   ', 'DIM')}{layout_desc}")
     if profiles:
-        _ap = Path(profiles[0]["repo_root"]) / ".console" / "active-task.md"
+        _ap = Path(profiles[0]["repo_root"]) / ".console" / "task.md"
         if _ap.exists():
             from operator_console.commands import _mission_snippet
             snip = _mission_snippet(_ap)

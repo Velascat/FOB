@@ -74,24 +74,24 @@ class TestObserveArgPriority:
 
 
 class TestObserveMissionFile:
-    """active-task.md is read when no --goal flag is given."""
+    """task.md is read when no --goal flag is given."""
 
     def test_reads_objective_section(self, tmp_path):
         console_dir = tmp_path / ".console"
         console_dir.mkdir()
-        (console_dir / "active-task.md").write_text(
+        (console_dir / "task.md").write_text(
             "# Current Focus\n\n## Objective\n\nRefactor the routing layer.\n\n## Context\n\nSome context.\n"
         )
         with patch("operator_console.observer._find_repo_root", return_value=tmp_path), \
              patch("operator_console.observer._git_remote_url", return_value=None):
             ctx = observe([])
         assert ctx["goal"] == "Refactor the routing layer."
-        assert ctx["source"] == "mission"
+        assert ctx["source"] == "file"
 
     def test_placeholder_objective_ignored(self, tmp_path):
         console_dir = tmp_path / ".console"
         console_dir.mkdir()
-        (console_dir / "active-task.md").write_text(
+        (console_dir / "task.md").write_text(
             "## Objective\n\n[Describe what you're working on]\n"
         )
         with patch("operator_console.observer._find_repo_root", return_value=tmp_path), \
@@ -109,7 +109,7 @@ class TestObserveMissionFile:
     def test_flag_overrides_mission_file(self, tmp_path):
         console_dir = tmp_path / ".console"
         console_dir.mkdir()
-        (console_dir / "active-task.md").write_text(
+        (console_dir / "task.md").write_text(
             "## Objective\n\nMission goal.\n"
         )
         with patch("operator_console.observer._find_repo_root", return_value=tmp_path), \
@@ -143,19 +143,19 @@ class TestReadMissionGoal:
 
     def test_returns_none_when_no_objective_section(self, tmp_path):
         (tmp_path / ".console").mkdir()
-        (tmp_path / ".console" / "active-task.md").write_text("## Context\n\nSome context.\n")
+        (tmp_path / ".console" / "task.md").write_text("## Context\n\nSome context.\n")
         assert _read_mission_goal(tmp_path) is None
 
     def test_returns_objective_content(self, tmp_path):
         (tmp_path / ".console").mkdir()
-        (tmp_path / ".console" / "active-task.md").write_text(
+        (tmp_path / ".console" / "task.md").write_text(
             "## Objective\n\nImprove test coverage.\n"
         )
         assert _read_mission_goal(tmp_path) == "Improve test coverage."
 
     def test_multiline_objective(self, tmp_path):
         (tmp_path / ".console").mkdir()
-        (tmp_path / ".console" / "active-task.md").write_text(
+        (tmp_path / ".console" / "task.md").write_text(
             "## Objective\n\nLine one.\nLine two.\n\n## Context\n\nOther.\n"
         )
         result = _read_mission_goal(tmp_path)
@@ -212,7 +212,7 @@ class TestAutoOnce:
     def test_uses_mission_goal_when_no_flag(self, tmp_path):
         console_dir = tmp_path / ".console"
         console_dir.mkdir()
-        (console_dir / "active-task.md").write_text(
+        (console_dir / "task.md").write_text(
             "## Objective\n\nMission-driven goal.\n"
         )
         with patch("operator_console.delegate.run_delegate", return_value=0) as mock_del, \

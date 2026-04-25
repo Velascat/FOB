@@ -39,7 +39,7 @@ Running `console` (no subcommand) is equivalent to `console open`. The shell wra
 5. If cwd is outside all known repos (e.g. `~/Documents/GitHub/`) → single-select picker (fzf or numbered fallback)
 6. `console multi` → explicit multi-select picker (Tab to toggle); each selected repo opens as a named tab
 7. Group selection is expanded to constituent profiles via `_expand_selection()`
-8. For each selected repo: initialize `.console/` if missing; if multiple repos selected, inject siblings as implicit peers in each briefing; write `.console/.briefing`, ensure `CLAUDE.md`
+8. For each selected repo: initialize `.console/` if missing; if multiple repos selected, inject siblings as implicit peers in each briefing; write `.console/.context`, ensure `CLAUDE.md`
 9. Multi-repo layout: Claude pane starts at `~/Documents/GitHub/` instead of the individual repo root
 10. Auto-save group to `~/.local/share/console/last-session.json` (for `console restore`)
 11. Print structured summary block: `session attaching/creating (operator_console)`, `layout fresh/saved` (new sessions only), active mission snippet
@@ -150,24 +150,24 @@ OperatorConsole uses a two-layer model for Claude context:
 
 | File | Role |
 |------|------|
-| `active-task.md` | Current objective — singular, concise, replace when focus changes |
-| `directives.md` | Stable repo policy — branch rules, operating constraints, low-churn |
-| `objectives.md` | Work inventory — in-progress, up-next, done |
-| `mission-log.md` | Chronological log — decisions, stop points, what changed and why |
+| `task.md` | Current objective — singular, concise, replace when focus changes |
+| `guidelines.md` | Stable repo policy — branch rules, operating constraints, low-churn |
+| `backlog.md` | Work inventory — in-progress, up-next, done |
+| `log.md` | Chronological log — decisions, stop points, what changed and why |
 
 **Layer 2 — Compiled launch artifact** (generated, do not edit):
 
 | File | Role |
 |------|------|
-| `.briefing` | Compiled startup context — all four files + runtime context, regenerated each launch |
+| `.context` | Compiled startup context — all four files + runtime context, regenerated each launch |
 
 `console init` creates the source files from `templates/mission/` if missing. `console` auto-inits on first launch.
 
-`CLAUDE.md` in the repo root tells Claude to read `.console/.briefing` as the primary startup context.
+`CLAUDE.md` in the repo root tells Claude to read `.console/.context` as the primary startup context.
 
 ## Briefing Generation
 
-`bootstrap.py` reads the four source files and compiles `.console/.briefing` at launch time. The briefing includes:
+`bootstrap.py` reads the four source files and compiles `.console/.context` at launch time. The briefing includes:
 
 - Active Mission, Standing Orders, Objectives, Mission Log (from source files)
 - Runtime context: repo name, repo root, current branch, timestamp, profile name

@@ -7,16 +7,16 @@ from pathlib import Path
 
 # Ordered sections in the briefing — label maps to filename
 BRIEFING_SECTIONS = [
-    ("active-task.md",   "Active Task"),
-    ("directives.md",    "Directives"),
-    ("objectives.md",    "Objectives"),
-    ("mission-log.md",   "Mission Log"),
+    ("task.md",   "Task"),
+    ("guidelines.md",    "Guidelines"),
+    ("backlog.md",    "Backlog"),
+    ("log.md",   "Log"),
 ]
 
-# Files pulled from peer repos (directives are repo-specific, skip them)
+# Files pulled from peer repos (guidelines are repo-specific, skip them)
 PEER_FILES = [
-    ("active-task.md", "Active Task"),
-    ("objectives.md",  "Objectives"),
+    ("task.md", "Task"),
+    ("backlog.md",  "Backlog"),
 ]
 
 
@@ -101,7 +101,7 @@ def write_bootstrap_file(
     profile_name: str | None = None,
 ) -> Path:
     prompt = build_resume_prompt(repo_root, files, peer_roots, profile_name)
-    out = repo_root / ".console" / ".briefing"
+    out = repo_root / ".console" / ".context"
     out.write_text(prompt)
     return out
 
@@ -273,7 +273,7 @@ def ensure_claude_md(
 
     extra_lines = ""
     if extra_files:
-        standard = {"directives.md", "active-task.md", "objectives.md", "mission-log.md"}
+        standard = {"guidelines.md", "task.md", "backlog.md", "log.md"}
         extras = [Path(f).name for f in extra_files if Path(f).name not in standard]
         if extras:
             extra_lines = "\nAdditional context files also compiled into the briefing:\n" + \
@@ -284,21 +284,21 @@ def ensure_claude_md(
 
 At the start of each session, read the compiled briefing before acting:
 
-- `.console/.briefing` — compiled startup context (generated fresh each launch)
+- `.console/.context` — compiled startup context (generated fresh each launch)
 
-The briefing contains your mission, standing orders, objectives, recent log, and runtime context.
+The context file contains your current task, guidelines, backlog, log, and runtime context.
 {extra_lines}
 **Source files** (editable truth — update these, not the briefing):
 
 | File | Role |
 |------|------|
-| `.console/active-task.md` | Current objective and definition of done |
-| `.console/directives.md` | Repo policy, branch rules, operating constraints |
-| `.console/objectives.md` | Work inventory — in-progress, up-next, done |
-| `.console/mission-log.md` | Recent decisions, stop points, what changed and why |
+| `.console/task.md` | Current objective and definition of done |
+| `.console/guidelines.md` | Repo policy, branch rules, operating constraints |
+| `.console/backlog.md` | Work inventory — in-progress, up-next, done |
+| `.console/log.md` | Recent decisions, stop points, what changed and why |
 
-After meaningful progress, update `.console/objectives.md` and `.console/mission-log.md`.
-Do not edit `.console/.briefing` directly — it is overwritten at each launch.
+After meaningful progress, update `.console/backlog.md` and `.console/log.md`.
+Do not edit `.console/.context` directly — it is overwritten at each launch.
 """
     if claude_md.exists():
         existing = claude_md.read_text()

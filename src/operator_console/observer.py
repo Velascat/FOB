@@ -2,7 +2,7 @@
 
 Priority order for goal:
     1. --goal CLI arg
-    2. Objective section in .console/active-task.md (in cwd or repo root)
+    2. Objective section in .console/task.md (in cwd or repo root)
     3. Default: "Analyze repository health and suggest improvements"
 
 Priority order for repo_key / clone_url:
@@ -49,8 +49,8 @@ def _parse_args(args: list[str]) -> dict:
 
 
 def _read_mission_goal(repo_path: Path) -> str | None:
-    """Extract content of Objective section from .console/active-task.md."""
-    mission_file = repo_path / ".console" / "active-task.md"
+    """Extract content of Objective section from .console/task.md."""
+    mission_file = repo_path / ".console" / "task.md"
     if not mission_file.exists():
         return None
     text = mission_file.read_text(encoding="utf-8")
@@ -134,6 +134,6 @@ def observe(args: list[str], cwd: Path | None = None) -> dict:
         "repo_key": repo_key,
         "clone_url": clone_url,
         "repo_path": str(repo_path),
-        "source": "mission" if (not opts["goal"] and _read_mission_goal(repo_path)) else
+        "source": "file" if (not opts["goal"] and _read_mission_goal(repo_path)) else
                   ("arg" if opts["goal"] else "default"),
     }

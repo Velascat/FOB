@@ -29,11 +29,11 @@ def hr(width: int = 60) -> str:
 
 def cmd_init(args: list[str], console_dir: Path) -> None:
     repo_root = Path(args[0]) if args else Path.cwd()
-    templates_dir = console_dir / "templates" / "mission"
+    templates_dir = console_dir / "templates" / "console"
     claude_dir = repo_root / ".console"
     claude_dir.mkdir(exist_ok=True)
 
-    files = ["directives.md", "active-task.md", "objectives.md", "mission-log.md"]
+    files = ["guidelines.md", "task.md", "backlog.md", "log.md"]
     created = []
     skipped = []
     for name in files:
@@ -148,11 +148,11 @@ def cmd_status(
     claude_dir = repo_root / ".console"
     if claude_dir.exists():
         print(f"  {c('.console/', 'DIM')}")
-        for name in ["active-task.md", "directives.md", "objectives.md", "mission-log.md"]:
+        for name in ["task.md", "guidelines.md", "backlog.md", "log.md"]:
             p = claude_dir / name
             mark = c("✓", "GRN") if p.exists() else c("✗", "DIM")
             print(f"    {mark}  {name}")
-        mission_path = claude_dir / "active-task.md"
+        mission_path = claude_dir / "task.md"
         if mission_path.exists():
             snippet = _mission_snippet(mission_path)
             if snippet:
@@ -424,7 +424,7 @@ def cmd_reset(args: list[str], default_profile: dict | None, console_dir: Path) 
         actions.append(("layout", f"delete .console/layout.json + .console/layout.kdl"))
     if do_state:
         present = [
-            n for n in ("active-task.md", "directives.md", "objectives.md", "mission-log.md")
+            n for n in ("task.md", "guidelines.md", "backlog.md", "log.md")
             if (repo_root / ".console" / n).exists()
         ]
         if present:
@@ -465,7 +465,7 @@ def cmd_reset(args: list[str], default_profile: dict | None, console_dir: Path) 
 
     if do_state:
         mission_files = [
-            "active-task.md", "directives.md", "objectives.md", "mission-log.md"
+            "task.md", "guidelines.md", "backlog.md", "log.md"
         ]
         removed = 0
         for name in mission_files:
@@ -488,7 +488,7 @@ def _repo_snapshot(profile: dict, tab_open: bool) -> dict:
     branch = get_branch(repo_root)
     console_init = (repo_root / ".console").exists()
     layout_res = layout_mod.load_any(repo_root) if console_init else None
-    mission = _mission_snippet(repo_root / ".console" / "active-task.md") if console_init else ""
+    mission = _mission_snippet(repo_root / ".console" / "task.md") if console_init else ""
     return {
         "name":             profile["name"],
         "repo_root":        str(repo_root),
@@ -568,7 +568,7 @@ def cmd_map(
     layout_res = layout_mod.load_any(repo_root)
 
     console_state_dir = repo_root / ".console"
-    mission_files = ["active-task.md", "directives.md", "objectives.md", "mission-log.md", ".briefing"]
+    mission_files = ["task.md", "guidelines.md", "backlog.md", "log.md", ".context"]
     mission_state = {n: (console_state_dir / n).exists() for n in mission_files}
 
     if use_json:
@@ -627,7 +627,7 @@ def cmd_map(
     print(c("  mission (.console/)", "B"))
     for name, exists in mission_state.items():
         mark  = c("✓", "GRN") if exists else c("✗", "DIM")
-        label = name + ("  (compiled)" if name == ".briefing" else "")
+        label = name + ("  (compiled)" if name == ".context" else "")
         print(f"    {mark}  {c(label, 'DIM') if not exists else label}")
     print()
     print(hr())
