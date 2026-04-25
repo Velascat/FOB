@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import time
 import urllib.request
 from pathlib import Path
@@ -46,6 +48,40 @@ def _find_repo(name: str) -> Path:
     return Path.home() / "Documents" / "GitHub" / name
 
 
+# Backend definitions: (display_name, candidate_binaries, install_hint)
+_BACKENDS = [
+    ("kodo",        ["kodo", "kodo-cli"],   "pip install kodo"),
+    ("claude_cli",  ["claude"],             "https://claude.ai/download"),
+    ("codex_cli",   ["codex"],              "npm install -g @openai/codex"),
+    ("aider_local", ["aider"],              "pip install aider-chat"),
+]
+
+
+def _backend_readiness() -> list[tuple[str, bool, str, str]]:
+    """Return list of (backend_name, available, path_or_empty, install_hint)."""
+    results = []
+    for name, candidates, hint in _BACKENDS:
+        found_path = ""
+        available = False
+        for binary in candidates:
+            path = shutil.which(binary)
+            if path:
+                # Quick version check to confirm it's runnable
+                try:
+                    subprocess.run(
+                        [path, "--version"],
+                        capture_output=True,
+                        timeout=3,
+                    )
+                except Exception:
+                    pass
+                found_path = path
+                available = True
+                break
+        results.append((name, available, found_path, hint))
+    return results
+
+
 def run_providers(args: list[str]) -> int:
     do_wait = "--wait" in args
     switchboard_port = os.environ.get("PORT_SWITCHBOARD", "20401")
@@ -75,6 +111,16 @@ def run_providers(args: list[str]) -> int:
             _ok(f"{binary} CLI available")
         else:
             _fail(f"{binary} CLI not found")
+
+    _section("Backends")
+    backend_results = _backend_readiness()
+    any_backend_missing = False
+    for backend_name, available, found_path, hint in backend_results:
+        if available:
+            _ok(f"{backend_name:<14} available   ({found_path})")
+        else:
+            _fail(f"{backend_name:<14} missing     install: {hint}")
+            any_backend_missing = True
 
     _section("OperationsCenter")
     worker_path = _find_repo("OperationsCenter") / "src" / "operations_center" / "entrypoints" / "worker" / "main.py"

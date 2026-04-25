@@ -9,6 +9,15 @@ Usage:
     console run --goal "Refresh README summary"
     console run --goal "Fix lint errors" --repo-key myrepo --clone-url https://...
     console run --goal "..." --task-type lint_fix --dry-run
+
+Exit codes:
+    0  success — execution completed and succeeded
+    1  general / unknown failure (crashed, missing args, no JSON output)
+    2  routing failure — SwitchBoard unreachable or returned an error
+    3  policy blocked / review required
+    4  backend execution failure (adapter ran but reported failure)
+    5  timeout during execution
+    6  invalid / malformed output from a subprocess
 """
 from __future__ import annotations
 
@@ -49,6 +58,29 @@ def _info(msg: str) -> None:
 
 def _warn(msg: str) -> None:
     print(f"  {_c('⚠', 'YLW')} {msg}")
+
+
+# ── Exit-code constants ───────────────────────────────────────────────────────
+EXIT_SUCCESS          = 0  # execution completed and succeeded
+EXIT_GENERAL          = 1  # crashed / missing args / no JSON output
+EXIT_ROUTING_FAILURE  = 2  # SwitchBoard unreachable or routing error
+EXIT_POLICY_BLOCKED   = 3  # policy gate blocked execution
+EXIT_BACKEND_FAILURE  = 4  # adapter ran but the backend reported failure
+EXIT_TIMEOUT          = 5  # execution timed out
+EXIT_MALFORMED        = 6  # subprocess returned unparseable / unexpected output
+
+# Map FailureReasonCategory strings to exit codes
+_FAILURE_CATEGORY_EXIT: dict[str, int] = {
+    "backend_error":        EXIT_BACKEND_FAILURE,
+    "validation_failed":    EXIT_BACKEND_FAILURE,
+    "unsupported_request":  EXIT_BACKEND_FAILURE,
+    "no_changes":           EXIT_BACKEND_FAILURE,
+    "conflict":             EXIT_BACKEND_FAILURE,
+    "timeout":              EXIT_TIMEOUT,
+    "policy_blocked":       EXIT_POLICY_BLOCKED,
+    "routing_error":        EXIT_ROUTING_FAILURE,
+    "unknown":              EXIT_GENERAL,
+}
 
 
 def _cp_python(cp_repo: Path) -> str:
@@ -176,7 +208,7 @@ def run_delegate(args: list[str]) -> int:
         # stdout is not JSON at all — genuine crash
         _fail("Planning crashed (no JSON output)")
         _info(plan_proc.stderr.strip() or plan_proc.stdout.strip())
-        return 1
+        return EXIT_MALFORMED
 
     if plan_proc.returncode != 0:
         # Structured failure from worker — routing_failure or similar
@@ -197,7 +229,8 @@ def run_delegate(args: list[str]) -> int:
             if partial_run_id:
                 from operator_console.runs import runs_root
                 _info(f"partial artifacts: {runs_root() / partial_run_id}")
-        return 1
+        # routing_failure and similar worker errors map to EXIT_ROUTING_FAILURE
+        return EXIT_ROUTING_FAILURE
 
     decision = bundle.get("decision", {})
     lane = decision.get("selected_lane", "?")
@@ -245,9 +278,10 @@ def run_delegate(args: list[str]) -> int:
             if exec_proc.returncode != 0:
                 _fail("Execute entrypoint crashed (no output file)")
                 _info(exec_proc.stderr.strip() or exec_proc.stdout.strip())
+                return EXIT_GENERAL
             else:
                 _fail("Execute entrypoint produced no output")
-            return 1
+                return EXIT_MALFORMED
 
         outcome = json.loads(result_file.read_text(encoding="utf-8"))
 
@@ -269,7 +303,7 @@ def run_delegate(args: list[str]) -> int:
                 if partial_run_id:
                     from operator_console.runs import runs_root
                     _info(f"partial artifacts: {runs_root() / partial_run_id}")
-            return 1
+            return EXIT_GENERAL
 
     exec_result = outcome.get("result", {})
     run_id = exec_result.get("run_id", "?")
@@ -281,6 +315,16 @@ def run_delegate(args: list[str]) -> int:
     from operator_console.runs import runs_root
     artifacts_dir = runs_root() / run_id
 
+    # Determine exit code from execution result
+    if not executed:
+        # Policy gate blocked execution
+        exit_code = EXIT_POLICY_BLOCKED
+    elif success:
+        exit_code = EXIT_SUCCESS
+    else:
+        # Map failure_category to a specific exit code
+        exit_code = _FAILURE_CATEGORY_EXIT.get(failure_category or "unknown", EXIT_BACKEND_FAILURE)
+
     if opts["json"]:
         print(json.dumps({
             "run_id": run_id,
@@ -291,24 +335,24 @@ def run_delegate(args: list[str]) -> int:
             "backend": backend,
             "failure_category": failure_category,
             "artifacts_dir": str(artifacts_dir),
+            "exit_code": exit_code,
         }, indent=2))
-        return 0
+        return exit_code
 
-    if not opts["json"]:
-        if executed and success:
-            _tag("Done", _c(f"status={status}", "GRN"))
-        elif executed and not success:
-            _warn(f"Backend ran but failed — status={status}  category={failure_category}")
-            _info("This is expected when the backend binary is not installed on this machine.")
-        else:
-            policy_notes = outcome.get("policy_decision", {}).get("notes", "")
-            _warn(f"Execution skipped by policy gate — status={status}")
-            if policy_notes:
-                _info(f"policy: {policy_notes}")
+    if executed and success:
+        _tag("Done", _c(f"status={status}", "GRN"))
+    elif executed and not success:
+        _warn(f"Backend ran but failed — status={status}  category={failure_category}")
+        _info("This is expected when the backend binary is not installed on this machine.")
+    else:
+        policy_notes = outcome.get("policy_decision", {}).get("notes", "")
+        _warn(f"Execution skipped by policy gate — status={status}")
+        if policy_notes:
+            _info(f"policy: {policy_notes}")
 
-        print()
-        print(f"  {_c('Run ID    ', 'DIM')} {_c(run_id, 'B')}")
-        print(f"  {_c('Artifacts ', 'DIM')} {_c(str(artifacts_dir), 'DIM')}")
-        print()
+    print()
+    print(f"  {_c('Run ID    ', 'DIM')} {_c(run_id, 'B')}")
+    print(f"  {_c('Artifacts ', 'DIM')} {_c(str(artifacts_dir), 'DIM')}")
+    print()
 
-    return 0
+    return exit_code
