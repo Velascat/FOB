@@ -251,12 +251,13 @@ def cmd_audit(args: list[str], default_profile: dict | None) -> None:
 # ── doctor ────────────────────────────────────────────────────────────────────
 
 DEPS = [
-    ("zellij",  ["zellij"],          "Terminal workspace manager — https://zellij.dev"),
-    ("claude",  ["claude"],           "Claude Code CLI — https://claude.ai/code"),
-    ("lazygit", ["lazygit"],           "Git TUI — brew install lazygit / apt install lazygit"),
-    ("git",     ["git"],              "Version control"),
-    ("python3", ["python3"],          "Python 3.x runtime"),
-    ("fzf",     ["fzf"],              "Fuzzy finder"),
+    ("zellij",        ["zellij"],          "Terminal workspace manager — https://zellij.dev"),
+    ("claude",        ["claude"],          "Claude Code CLI — https://claude.ai/code"),
+    ("lazygit",       ["lazygit"],         "Git TUI — brew install lazygit / apt install lazygit"),
+    ("git",           ["git"],             "Version control"),
+    ("python3",       ["python3"],         "Python 3.x runtime"),
+    ("fzf",           ["fzf"],             "Fuzzy finder"),
+    ("inotifywait",   ["inotifywait"],     "Filesystem event watcher — apt install inotify-tools"),
 ]
 
 # Mirror of loadout.sh TOOLS — name, binary alternatives, description
