@@ -8,7 +8,7 @@ __pycache__/
 # Profiles are private by default; only platform-group members are tracked.
 config/profiles/*.yaml
 !config/profiles/platform.yaml
-!config/profiles/controlplane.yaml
+!config/profiles/operations_center.yaml
 !config/profiles/operator_console.yaml
 !config/profiles/switchboard.yaml
 !config/profiles/workstation.yaml

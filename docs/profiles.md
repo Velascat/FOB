@@ -11,7 +11,7 @@ Only platform-group member profiles are tracked in git. All other profiles are g
 ```
 config/profiles/*.yaml        # gitignored
 !config/profiles/platform.yaml      # tracked
-!config/profiles/controlplane.yaml  # tracked
+!config/profiles/operations_center.yaml  # tracked
 !config/profiles/console.yaml           # tracked
 !config/profiles/switchboard.yaml   # tracked
 !config/profiles/workstation.yaml   # tracked
@@ -38,7 +38,7 @@ claude:
     - .console/mission-log.md
     # - .console/extra-context.md            # Add project-specific files here
   peers: []                              # Other profile names to pull context from
-    # - controlplane                     # Includes that repo's active-mission + objectives
+    # - operations_center                     # Includes that repo's active-mission + objectives
 
 panes:
   git:
@@ -58,7 +58,7 @@ A profile with a `group:` list (and no `repo_root:`) defines a named group. Sele
 ```yaml
 name: platform
 group:
-  - controlplane
+  - operations_center
   - console
   - switchboard
   - workstation
@@ -74,7 +74,7 @@ Groups appear in the picker with `▸` prefix and their member list. `console op
 
 ## Profile Constraints
 
-- `name` must match the filename stem (e.g., `name: controlplane` → `controlplane.yaml`)
+- `name` must match the filename stem (e.g., `name: operations_center` → `operations_center.yaml`)
 - `repo_root` must be an absolute path to an existing directory
 - Tilde (`~`) is expanded automatically
 - All fields except `name` and `repo_root` are optional
@@ -126,7 +126,7 @@ When multiple repos are selected in a single `console open` run, each repo's `.c
 ```yaml
 claude:
   peers:
-    - controlplane    # Claude sees OperationsCenter's current mission + objectives
+    - operations_center    # Claude sees OperationsCenter's current mission + objectives
 ```
 
 ## Layout Persistence
@@ -165,7 +165,7 @@ Saved layout metadata (`.console/layout.json`) includes the backend, repo root, 
 ## Example: Configured Profile
 
 ```yaml
-name: controlplane
+name: operations_center
 repo_root: /home/dev/Documents/GitHub/OperationsCenter
 status_repos: OperationsCenter
 

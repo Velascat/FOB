@@ -1,0 +1,28 @@
+name: OperatorConsole
+repo_root: /home/dev/Documents/GitHub/OperatorConsole
+status_repos: ""  # show all OperationsCenter-tracked repos
+
+# TODO: migrate to aider once SwitchBoard integration is validated end-to-end.
+# To switch: add `tool: aider` and an `aider: {profile: capable}` block here,
+# matching the pattern in switchboard.yaml.  The `claude:` block below can be
+# removed at that point.
+claude:
+  continue: true
+  bootstrap_files:
+    - .console/directives.md
+    - .console/active-task.md
+    - .console/objectives.md
+    - .console/mission-log.md
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  logs:
+    command: tail -f .console/runtime.log 2>/dev/null
+  shell:
+    command: bash
+
+helpers:
+  test: python3 -m pytest tests/ -x -v
+  audit: ruff check src/

@@ -86,7 +86,7 @@ To kick off a task and walk away:
 Claude continues working. When you re-attach, the pane shows exactly what happened.
 
 For cross-repo autonomous work (e.g. Claude on OperationsCenter monitoring OperatorConsole state), the pattern is:
-- Run `console open controlplane console` to open both repos in tabs
+- Run `console open operations_center operator_console` to open both repos in tabs
 - Give Claude in the OperationsCenter tab explicit instructions and a clear stopping condition
 - Detach — both Claude instances keep running independently
 

@@ -1,6 +1,6 @@
 name: platform
 group:
-  - controlplane
-  - console
+  - operations_center
+  - operator_console
   - switchboard
   - workstation
