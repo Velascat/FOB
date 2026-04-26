@@ -28,7 +28,7 @@ _WATCH_DIR = (
 _QUEUE_DIR = Path.home() / ".console" / "queue"
 _PROFILES_DIR = Path(__file__).resolve().parent.parent.parent / "config" / "profiles"
 
-_ROLES = ("intake", "goal", "test", "improve", "propose", "review", "spec")
+_ROLES = ("intake", "goal", "test", "improve", "propose", "review", "spec", "watchdog")
 _ACTIONS = ("tail logs", "board", "circuit breaker", "memory")
 
 REFRESH_INTERVAL = 3
@@ -141,7 +141,7 @@ def _draw_main(stdscr, data: dict, sel: int, refreshing: bool,
 
     spin = " ⟳" if refreshing else "  "
     ts   = time.strftime("%H:%M:%S")
-    put(0, f" OperationsCenter{spin}  {ts}", C["HEAD"] | curses.A_BOLD)
+    put(0, f" Operations Center{spin}  {ts}", C["HEAD"] | curses.A_BOLD)
     _sep(stdscr, 1, h, w, C["DIM"])
 
     row = 2
@@ -160,6 +160,10 @@ def _draw_main(stdscr, data: dict, sel: int, refreshing: bool,
             attr = C["DIM"]
         if i == sel:
             put(row, ("▶" + line[1:])[:w - 1], C["SEL"] | curses.A_BOLD)
+            row += 1
+            # show action hints inline under selected role
+            actions_hint = "    tail logs · board · circuit breaker · memory  [↵]"
+            put(row, actions_hint[:w - 1], C["HEAD"])
         else:
             put(row, line, attr)
         row += 1
@@ -188,7 +192,7 @@ def _draw_main(stdscr, data: dict, sel: int, refreshing: bool,
 
     if flash:
         put(h - 2, f" {flash}", C["HEAD"])
-    put(h - 1, " ↑↓ navigate  ↵ actions  r refresh  q quit", C["DIM"])
+    put(h - 1, " ↑↓ navigate  ↵ open action  r refresh  q quit", C["DIM"])
     stdscr.refresh()
 
 

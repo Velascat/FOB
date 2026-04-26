@@ -37,7 +37,7 @@ def _repo_root(name: str) -> Path:
 
 
 _WATCH_DIR = Path.home() / "Documents" / "GitHub" / "OperationsCenter" / "logs" / "local" / "watch-all"
-_ROLES = ("intake", "goal", "test", "improve", "propose", "review", "spec")
+_ROLES = ("intake", "goal", "test", "improve", "propose", "review", "spec", "watchdog")
 
 
 def _watcher_status() -> dict[str, str]:
