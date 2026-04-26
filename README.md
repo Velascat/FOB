@@ -316,3 +316,9 @@ For the full platform ownership model see `WorkStation/docs/architecture/ownersh
 - [docs/demo.md](docs/demo.md) — end-to-end architecture validation walkthrough
 - [docs/profiles.md](docs/profiles.md) — profile format and optional configuration
 - [docs/guardrails.md](docs/guardrails.md) — safe branch practices and Claude operating model
+
+---
+
+## License
+
+GNU Affero General Public License v3.0 — see [LICENSE](LICENSE).
