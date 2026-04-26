@@ -141,13 +141,16 @@ def get_claude_command(
         "#!/usr/bin/env bash\n"
         f"SESSION_FILE='{sf}'\n"
         f"PROJECT_DIR='{pd}'\n"
+        "_save_session() {\n"
+        "    newest=$(ls -t \"$PROJECT_DIR\"/*.jsonl 2>/dev/null | head -1)\n"
+        "    [ -n \"$newest\" ] && basename \"$newest\" .jsonl > \"$SESSION_FILE\" || true\n"
+        "}\n"
+        "trap _save_session EXIT\n"
         "if [ -f \"$SESSION_FILE\" ]; then\n"
         "    claude --resume \"$(cat \"$SESSION_FILE\")\" || claude\n"
         "else\n"
         "    claude\n"
         "fi\n"
-        "newest=$(ls -t \"$PROJECT_DIR\"/*.jsonl 2>/dev/null | head -1)\n"
-        "[ -n \"$newest\" ] && basename \"$newest\" .jsonl > \"$SESSION_FILE\" || true\n"
         "exec bash -l\n"
     )
 

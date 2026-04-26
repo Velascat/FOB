@@ -13,34 +13,21 @@ from operator_console.bootstrap import get_claude_command, get_codex_command
 
 CONSOLE_SESSION = "operator_console"
 _GITHUB_DIR = Path.home() / "Documents" / "GitHub"
-_OC_STATUS  = _GITHUB_DIR / "OperationsCenter" / "scripts" / "operations-center.sh"
-
 _C = {"R": "\033[0m", "DIM": "\033[2m", "GRN": "\033[32m", "YLW": "\033[33m"}
 
-def _status_viewer_cmd(oc_status_raw: str, status_arg: str, key: str = "default") -> str:
-    """Write a restart-loop launch script for the status viewer and return the bash command.
-
-    Uses operator_console.status_viewer (mirrors git_watcher): clears screen, runs status,
-    disables mouse modes Rich may have enabled, waits for r/q.  The while-loop
-    in the script restarts the viewer if the user presses q (keeps pane alive).
-    """
+def _watcher_status_pane_cmd(key: str = "default", profile: str = "") -> str:
+    """Write a restart-loop script for the curses watcher-status pane."""
     key = key.lower()
-
-    # Build the extra args list for status_viewer (repo filter, if any)
-    # status_arg is already shell-safe: single quotes replaced with double quotes
-    safe_arg = status_arg.replace("'", '"').strip()
-    viewer_extra = f" {safe_arg}" if safe_arg else ""
-
-    script_path = Path(tempfile.gettempdir()) / f"console-status-{key}.sh"
+    profile_arg = f" --profile '{profile.replace(chr(39), chr(39)+chr(92)+chr(39)+chr(39))}'" if profile else ""
+    script_path = Path(tempfile.gettempdir()) / f"console-watcher-pane-{key}.sh"
     script_path.write_text(
         "#!/usr/bin/env bash\n"
-        f"while true; do\n"
-        f"    python3 -m operator_console.status_viewer '{oc_status_raw}'{viewer_extra}\n"
-        f"    sleep 1\n"
-        f"done\n"
+        "while true; do\n"
+        f"    python3 -m operator_console.watcher_status_pane{profile_arg}\n"
+        "    sleep 1\n"
+        "done\n"
     )
     script_path.chmod(0o755)
-
     safe_path = str(script_path).replace("'", "'\\''")
     return f"bash '{safe_path}'"
 
@@ -66,13 +53,12 @@ def _single_pane_block(
     git_cmd    = panes_cfg.get("git",  {}).get("command", "lazygit")
     safe_repo  = repo.replace("'", "'\\''")
     safe_cwd   = str(claude_cwd).replace("'", "'\\''") if claude_cwd else safe_repo
-    status_repos = profile.get("status_repos", Path(repo).name)
-    status_arg   = f" --repo '{status_repos}'" if status_repos else ""
     i = indent
 
+    profile_name = profile.get("name", "single")
     claude_cmd   = get_claude_command(profile, Path(repo), console_dir=console_dir, claude_cwd=claude_cwd)
     codex_cmd    = get_codex_command(profile, Path(repo), console_dir=console_dir)
-    status_cmd   = _status_viewer_cmd(str(_OC_STATUS), status_arg, key=profile.get("name", "single"))
+    status_cmd   = _watcher_status_pane_cmd(key=profile_name, profile=profile_name)
 
     return (
         f'{i}pane split_direction="vertical" {{\n'
@@ -95,7 +81,7 @@ def _single_pane_block(
         f'{i}    pane size="28%" {{\n'
         f'{i}        pane stacked=true {{\n'
         f'{i}            pane name="shell" command="bash" {{\n'
-        f'{i}                args "-c" "cd \'{safe_repo}\' && while true; do bash -l; sleep 1; done"\n'
+        f'{i}                args "-c" "export CONSOLE_PROFILE=\'{profile_name}\' && cd \'{safe_repo}\' && while true; do bash -l; sleep 1; done"\n'
         f'{i}            }}\n'
         f'{i}            pane name="status" command="bash" {{\n'
         f'{i}                args "-c" "{status_cmd}"\n'
@@ -161,18 +147,13 @@ def _multi_pane_block(
     )
 
     # Right column: stacked shells + status (status last)
-    _repo_filter = next(
-        (p["status_repos"] for p in profiles if "status_repos" in p),
-        "",
-    )
-    status_arg = f" --repo '{_repo_filter}'" if _repo_filter else ""
-    status_cmd = _status_viewer_cmd(str(_OC_STATUS), status_arg, key=session_key)
+    status_cmd = _watcher_status_pane_cmd(key=session_key, profile=session_key)
 
     right_block = (
         f'{i}    pane size="28%" {{\n'
         f'{i}        pane stacked=true {{\n'
         f'{i}            pane name="shell" command="bash" {{\n'
-        f'{i}                args "-c" "cd \'{safe_cwd}\' && while true; do bash -l; sleep 1; done"\n'
+        f'{i}                args "-c" "export CONSOLE_PROFILE=\'{session_key}\' && cd \'{safe_cwd}\' && while true; do bash -l; sleep 1; done"\n'
         f'{i}            }}\n'
         f'{i}            pane name="status" command="bash" {{\n'
         f'{i}                args "-c" "{status_cmd}"\n'

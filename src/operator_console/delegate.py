@@ -123,7 +123,7 @@ def _parse_args(args: list[str]) -> dict:
     return parsed
 
 
-def run_delegate(args: list[str]) -> int:
+def run_delegate(args: list[str], profile_repos: dict[str, Path] | None = None) -> int:
     opts = _parse_args(args)
     interactive = sys.stdin.isatty()
 
@@ -132,7 +132,7 @@ def run_delegate(args: list[str]) -> int:
 
     # ── Step 1: Repo ─────────────────────────────────────────────────────────
 
-    repos = _discover_repos()
+    repos = profile_repos if profile_repos is not None else _discover_repos()
 
     # Auto-detect from cwd
     cwd = Path.cwd()

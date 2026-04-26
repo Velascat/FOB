@@ -197,6 +197,32 @@ def show_help(_: list[str]) -> None:
         print()
 
 
+def _profile_repos_from_env() -> dict[str, Path] | None:
+    """Return {name: path} for the active CONSOLE_PROFILE, or None if unset/unknown."""
+    import os
+    from operator_console.profile_loader import load_profile
+    name = os.environ.get("CONSOLE_PROFILE", "").strip().lower()
+    if not name:
+        return None
+    all_profiles = _discover_repos()
+    p = all_profiles.get(name)
+    if not p:
+        return None
+    if "group" in p and "repo_root" not in p:
+        result: dict[str, Path] = {}
+        for sub_name in p["group"]:
+            try:
+                sub = load_profile(sub_name, PROFILES_DIR)
+                if "repo_root" in sub:
+                    result[sub["name"]] = Path(sub["repo_root"])
+            except FileNotFoundError:
+                pass
+        return result or None
+    if "repo_root" in p:
+        return {p["name"]: Path(p["repo_root"])}
+    return None
+
+
 def _profile_for_cwd() -> dict | None:
     """Find the profile whose repo_root contains the current working directory."""
     cwd = Path.cwd()
@@ -626,7 +652,7 @@ def main() -> None:
 
         case "run":
             from operator_console.delegate import run_delegate
-            sys.exit(run_delegate(args))
+            sys.exit(run_delegate(args, profile_repos=_profile_repos_from_env()))
 
         case "queue":
             from operator_console.queue_status import run_queue
