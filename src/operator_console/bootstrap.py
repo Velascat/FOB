@@ -145,12 +145,13 @@ def get_claude_command(
         "    newest=$(ls -t \"$PROJECT_DIR\"/*.jsonl 2>/dev/null | head -1)\n"
         "    [ -n \"$newest\" ] && basename \"$newest\" .jsonl > \"$SESSION_FILE\" || true\n"
         "}\n"
-        "trap _save_session EXIT\n"
+        "_save_session\n"
         "if [ -f \"$SESSION_FILE\" ]; then\n"
         "    claude --resume \"$(cat \"$SESSION_FILE\")\" || claude\n"
         "else\n"
         "    claude\n"
         "fi\n"
+        "_save_session\n"
         "exec bash -l\n"
     )
 
@@ -209,19 +210,24 @@ def get_codex_command(
         if console_dir is not None:
             session_file = console_dir / "config" / "profiles" / f"{key}.codex-session"
             sf = str(session_file).replace("'", "'\\''")
+            _codex_save = (
+                "newest=$(find ~/.codex/sessions -name 'rollout-*.jsonl' 2>/dev/null"
+                + " | sort -r | head -1)\n"
+                + "[ -n \"$newest\" ] && basename \"$newest\" .jsonl"
+                + " | grep -oE '[0-9a-f-]{36}$' > \"$SESSION_FILE\" || true\n"
+            )
             script = (
                 not_found_block
                 + f"SESSION_FILE='{sf}'\n"
+                # Refresh session file at launch — catches missed saves from abrupt shutdown
+                + _codex_save
                 + "if [ -f \"$SESSION_FILE\" ]; then\n"
                 + f"    '{safe_bin}'{approval_arg} resume \"$(cat \"$SESSION_FILE\")\" || '{safe_bin}'{approval_arg}\n"
                 + "else\n"
                 + f"    '{safe_bin}'{approval_arg}\n"
                 + "fi\n"
-                # Extract UUID from newest session file after exit
-                + "newest=$(find ~/.codex/sessions -name 'rollout-*.jsonl' 2>/dev/null"
-                + " | sort -r | head -1)\n"
-                + "[ -n \"$newest\" ] && basename \"$newest\" .jsonl"
-                + " | grep -oE '[0-9a-f-]{36}$' > \"$SESSION_FILE\" || true\n"
+                # Save again after clean exit
+                + _codex_save
                 + "exec bash -l\n"
             )
         else:
