@@ -432,19 +432,19 @@ def _draw_main(stdscr, data: dict, sel: int, refreshing: bool, flash: str, C: di
     if row < h - 2:
         put(row, " System Resources", C["HEAD"] | curses.A_BOLD); row += 1
     if row < h - 2:
-        put(row, f"  Load Average       1m      5m      15m", C["DIM"]); row += 1
+        put(row, f"                        1m       5m      15m", C["DIM"]); row += 1
     if row < h - 2:
         load_str = res.get('load', '?')
         parts = load_str.split('/') if '/' in load_str else ['?', '?', '?']
-        load_formatted = f"{parts[0]:>6} {parts[1]:>6} {parts[2]:>6}"
-        put(row, f"  Processes/Queue    {load_formatted}", C["DIM"]); row += 1
+        load_formatted = f"{parts[0]:>7} {parts[1]:>7} {parts[2]:>7}"
+        put(row, f"  Processes/Queue {load_formatted}", C["DIM"]); row += 1
     if row < h - 2:
         load_pct_str = res.get('load_pct', '?')
         num_cores = res.get('num_cores', 0)
         cores_str = f"({num_cores} cores)" if num_cores > 0 else ""
         pct_parts = load_pct_str.split('/') if '/' in load_pct_str else ['?', '?', '?']
-        pct_formatted = f"{pct_parts[0]:>6} {pct_parts[1]:>6} {pct_parts[2]:>6}"
-        put(row, f"  CPU Utilization %  {pct_formatted}  {cores_str}", C["DIM"]); row += 1
+        pct_formatted = f"{pct_parts[0]:>7} {pct_parts[1]:>7} {pct_parts[2]:>7}"
+        put(row, f"  CPU Utilization {pct_formatted}  {cores_str}", C["DIM"]); row += 1
     if row < h - 2:
         mp  = res.get("mem_pct", 0)
         mug = res.get("mem_used_gb", 0)
