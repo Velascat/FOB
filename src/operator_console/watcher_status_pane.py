@@ -432,32 +432,32 @@ def _draw_main(stdscr, data: dict, sel: int, refreshing: bool, flash: str, C: di
     if row < h - 2:
         put(row, " System Resources", C["HEAD"] | curses.A_BOLD); row += 1
     if row < h - 2:
-        put(row, f"                        1m       5m      15m", C["DIM"]); row += 1
+        put(row, f"  {'':15}  {'1m':>7} {'5m':>7} {'15m':>7}", C["DIM"]); row += 1
     if row < h - 2:
         load_str = res.get('load', '?')
         parts = load_str.split('/') if '/' in load_str else ['?', '?', '?']
-        load_formatted = f"{parts[0]:>7} {parts[1]:>7} {parts[2]:>7}"
-        put(row, f"  Processes/Queue {load_formatted}", C["DIM"]); row += 1
+        put(row, f"  {'Processes/Queue':15}  {parts[0]:>7} {parts[1]:>7} {parts[2]:>7}", C["DIM"]); row += 1
     if row < h - 2:
         load_pct_str = res.get('load_pct', '?')
         num_cores = res.get('num_cores', 0)
         cores_str = f"({num_cores} cores)" if num_cores > 0 else ""
         pct_parts = load_pct_str.split('/') if '/' in load_pct_str else ['?', '?', '?']
-        pct_formatted = f"{pct_parts[0]:>7} {pct_parts[1]:>7} {pct_parts[2]:>7}"
-        put(row, f"  CPU Utilization {pct_formatted}  {cores_str}", C["DIM"]); row += 1
+        put(row, f"  {'CPU Utilization':15}  {pct_parts[0]:>7} {pct_parts[1]:>7} {pct_parts[2]:>7}  {cores_str}", C["DIM"]); row += 1
     if row < h - 2:
         mp  = res.get("mem_pct", 0)
         mug = res.get("mem_used_gb", 0)
         mtg = res.get("mem_total_gb", 0)
         bar_str = _bar(mp)
-        put(row, f"  RAM  {bar_str}  {mp:>3d}%  {mug:.1f}/{mtg:.1f}G",
+        mem_info = f"{mug:.1f}/{mtg:.1f}G"
+        put(row, f"  {'RAM':15}  {bar_str:>7} {mp:>3d}%  {mem_info}",
             C["YLW"] if mp > 80 else C["DIM"]); row += 1
     if row < h - 2 and res.get("swap_total_gb", 0) > 0:
         sp  = res.get("swap_pct", 0)
         sug = res.get("swap_used_gb", 0)
         stg = res.get("swap_total_gb", 0)
         bar_str = _bar(sp)
-        put(row, f"  Swap {bar_str}  {sp:>3d}%  {sug:.1f}/{stg:.1f}G",
+        swap_info = f"{sug:.1f}/{stg:.1f}G"
+        put(row, f"  {'Swap':15}  {bar_str:>7} {sp:>3d}%  {swap_info}",
             C["YLW"] if sp > 50 else C["DIM"]); row += 1
 
     if flash:
