@@ -1,0 +1,7 @@
+repo_key: OperatorConsole
+src_root: src
+tests_root: tests
+
+# Minimum baseline — runs Custodian's generic C1-C8 only.
+# Add `plugins:` and `detectors:` here when this repo grows its own
+# `_custodian/` overlay layer (see OperationsCenter for a worked example).
