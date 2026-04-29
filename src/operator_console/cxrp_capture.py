@@ -1,12 +1,12 @@
-"""ECP boundary surface for OperatorConsole.
+"""CxRP boundary surface for OperatorConsole.
 
-OperatorConsole speaks ECP at its edges: it captures operator-submitted
-work as an ECP-shaped ``TaskProposal`` and consumes ECP-shaped
+OperatorConsole speaks CxRP at its edges: it captures operator-submitted
+work as an CxRP-shaped ``TaskProposal`` and consumes CxRP-shaped
 ``ExecutionResult`` payloads for display. It does not own lane selection
 (SwitchBoard) or adapter dispatch (OperationsCenter).
 
 This module is intentionally thin — three pure functions that read or
-build ECP envelopes. No network calls, no subprocess execution, no
+build CxRP envelopes. No network calls, no subprocess execution, no
 delegation logic.
 """
 
@@ -15,7 +15,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from cxrp.contracts import ExecutionResult as EcpExecutionResult, TaskProposal as EcpTaskProposal
+from cxrp.contracts import ExecutionResult as CxrpExecutionResult, TaskProposal as CxrpTaskProposal
 from cxrp.validation.json_schema import validate_contract
 
 
@@ -29,8 +29,8 @@ def build_task_proposal(
     submitter: Optional[str] = None,
     constraints: Optional[list[str]] = None,
     metadata: Optional[dict[str, Any]] = None,
-) -> EcpTaskProposal:
-    """Build an ECP TaskProposal from operator input.
+) -> CxrpTaskProposal:
+    """Build an CxRP TaskProposal from operator input.
 
     OperatorConsole does not infer task_type, priority, or risk_level —
     those are downstream classifications. The proposal it emits names
@@ -51,7 +51,7 @@ def build_task_proposal(
     if metadata:
         md.update(metadata)
 
-    return EcpTaskProposal(
+    return CxrpTaskProposal(
         proposal_id=_new_proposal_id(),
         created_at=datetime.now(tz=timezone.utc),
         metadata=md,
@@ -63,7 +63,7 @@ def build_task_proposal(
 
 
 def validate_inbound_execution_result(payload: dict[str, Any]) -> None:
-    """Validate an inbound ExecutionResult payload against ECP's schema.
+    """Validate an inbound ExecutionResult payload against CxRP's schema.
 
     Raises jsonschema.ValidationError on shape mismatch.
     """
@@ -71,7 +71,7 @@ def validate_inbound_execution_result(payload: dict[str, Any]) -> None:
 
 
 def summarize_execution_result(payload: dict[str, Any]) -> str:
-    """Render a one-line operator-facing summary of an ECP ExecutionResult."""
+    """Render a one-line operator-facing summary of an CxRP ExecutionResult."""
     validate_inbound_execution_result(payload)
     status = payload.get("status", "?")
     request_id = payload.get("request_id", "?")

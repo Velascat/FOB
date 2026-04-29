@@ -1,6 +1,6 @@
-"""Phase 4: OperatorConsole speaks ECP at its edges.
+"""Phase 4: OperatorConsole speaks CxRP at its edges.
 
-Tests assert that operator-submitted work becomes a schema-valid ECP
+Tests assert that operator-submitted work becomes a schema-valid CxRP
 TaskProposal, and that inbound ExecutionResult payloads are rejected
 when they don't conform.
 """
@@ -11,18 +11,18 @@ from dataclasses import asdict
 from pathlib import Path
 
 import pytest
-from cxrp.contracts import TaskProposal as EcpTaskProposal
+from cxrp.contracts import TaskProposal as CxrpTaskProposal
 from cxrp.validation.json_schema import validate_contract
 from jsonschema import ValidationError
 
-from operator_console.ecp_capture import (
+from operator_console.cxrp_capture import (
     build_task_proposal,
     summarize_execution_result,
     validate_inbound_execution_result,
 )
 
 
-def _serialize_envelope(contract: EcpTaskProposal) -> dict:
+def _serialize_envelope(contract: CxrpTaskProposal) -> dict:
     return contract.to_dict()
 
 
@@ -32,7 +32,7 @@ def test_build_task_proposal_returns_ecp_envelope():
         objective="Stabilize tests/test_pipeline.py::test_repeated_runs",
         repo_key="velascat/operator-console",
     )
-    assert isinstance(tp, EcpTaskProposal)
+    assert isinstance(tp, CxrpTaskProposal)
     assert tp.contract_kind == "task_proposal"
     assert tp.schema_version == "0.2"
 
@@ -118,9 +118,9 @@ def test_operator_console_does_not_emit_lane_decision():
     """Boundary invariant: OperatorConsole does not own lane selection."""
     src = Path(__file__).resolve().parents[1] / "src" / "operator_console"
     forbidden_terms = (
-        "from ecp.contracts import LaneDecision",
-        "ecp.contracts.lane_decision",
-        "to_ecp_lane_decision",
+        "from cxrp.contracts import LaneDecision",
+        "cxrp.contracts.lane_decision",
+        "to_cxrp_lane_decision",
     )
     offenders = []
     for py_file in src.rglob("*.py"):
