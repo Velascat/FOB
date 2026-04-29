@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """console demo — validate the full end-to-end architecture path.
 
 Runs the full stack in order:

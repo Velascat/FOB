@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """Load and validate workspace profiles from YAML config files."""
 from __future__ import annotations
 from pathlib import Path

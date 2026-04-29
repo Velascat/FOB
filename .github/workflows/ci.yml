@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  license-check:
+    name: License headers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check SPDX headers
+        run: |
+          missing=$(git ls-files "*.py" | xargs grep -L "SPDX-License-Identifier" 2>/dev/null || true)
+          if [ -n "$missing" ]; then
+            echo "Missing SPDX-License-Identifier header in:"
+            echo "$missing"
+            exit 1
+          fi

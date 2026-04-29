@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """console cycle — execute exactly one autonomous cycle.
 
 Observe → Propose → Decide → Execute → Record

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """Layout persistence — save, load, show, reset OperatorConsole workspace layouts."""
 from __future__ import annotations
 import json

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """Interactive multi-repo git dirty watcher.
 
 Displays live dirty/clean status across repo roots. Arrow keys navigate,

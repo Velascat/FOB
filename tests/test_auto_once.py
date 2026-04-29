@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """Tests for observer.py and auto_once.py.
 
 observer.observe() is a pure function (no subprocess / FS side effects when

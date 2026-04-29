@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """console run — submit a task to the local queue for OperationsCenter intake.
 
 Interactive wizard (repo → task type → goal) writes a JSON task file to

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """Generate Claude context from repo-local .console/ state files."""
 from __future__ import annotations
 import shutil

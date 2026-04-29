@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """Phase 4: OperatorConsole speaks CxRP at its edges.
 
 Tests assert that operator-submitted work becomes a schema-valid CxRP

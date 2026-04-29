@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """CxRP boundary surface for OperatorConsole.
 
 OperatorConsole speaks CxRP at its edges: it captures operator-submitted

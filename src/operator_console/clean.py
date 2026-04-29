@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """console clean — remove old run artifacts, keeping the most recent N runs."""
 from __future__ import annotations
 

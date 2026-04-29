@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (C) 2026 Velascat
 """console queue — inspect pending tasks in ~/.console/queue/."""
 from __future__ import annotations
 
