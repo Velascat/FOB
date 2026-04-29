@@ -1,2 +1,2 @@
 PyYAML>=6.0
-execution-contract-protocol @ git+https://github.com/Velascat/ExecutionContractProtocol.git
+cxrp @ git+https://github.com/Velascat/ExecutionContractProtocol.git

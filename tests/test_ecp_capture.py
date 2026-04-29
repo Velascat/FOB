@@ -11,8 +11,8 @@ from dataclasses import asdict
 from pathlib import Path
 
 import pytest
-from ecp.contracts import TaskProposal as EcpTaskProposal
-from ecp.validation.json_schema import validate_contract
+from cxrp.contracts import TaskProposal as EcpTaskProposal
+from cxrp.validation.json_schema import validate_contract
 from jsonschema import ValidationError
 
 from operator_console.ecp_capture import (

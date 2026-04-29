@@ -15,8 +15,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from ecp.contracts import ExecutionResult as EcpExecutionResult, TaskProposal as EcpTaskProposal
-from ecp.validation.json_schema import validate_contract
+from cxrp.contracts import ExecutionResult as EcpExecutionResult, TaskProposal as EcpTaskProposal
+from cxrp.validation.json_schema import validate_contract
 
 
 def build_task_proposal(
