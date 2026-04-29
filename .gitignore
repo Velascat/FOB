@@ -12,6 +12,8 @@ config/profiles/*.yaml
 !config/profiles/operator_console.yaml
 !config/profiles/switchboard.yaml
 !config/profiles/workstation.yaml
+!config/profiles/custodian.yaml
+!config/profiles/execution_contract_protocol.yaml
 
 # Saved tab layouts, session IDs, and generated rc files (always private)
 config/profiles/*.kdl

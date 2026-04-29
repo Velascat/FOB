@@ -1,0 +1,22 @@
+name: Custodian
+repo_root: /home/dev/Documents/GitHub/Custodian
+
+claude:
+  continue: true
+  bootstrap_files:
+    - .console/guidelines.md
+    - .console/task.md
+    - .console/backlog.md
+    - .console/log.md
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  shell:
+    command: bash
+
+helpers:
+  test: pytest -q
+  audit: ruff check .
+  doctor: custodian-doctor --strict --repo .

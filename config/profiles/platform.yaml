@@ -4,3 +4,5 @@ group:
   - operator_console
   - switchboard
   - workstation
+  - custodian
+  - execution_contract_protocol
