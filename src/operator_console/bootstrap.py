@@ -247,7 +247,8 @@ def get_codex_command(
     return f"bash '{safe_path}'"
 
 
-# TODO: OperatorConsole's own profile (config/profiles/operator_console.yaml) still uses Claude.
+# TODO [deferred, reviewed 2026-04-30]: OperatorConsole's own profile
+# (config/profiles/operator_console.yaml) still uses Claude.
 # Switch it to `tool: aider` once SwitchBoard integration is validated end-to-end.
 def get_aider_command(
     profile: dict,

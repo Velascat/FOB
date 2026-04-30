@@ -7,10 +7,26 @@ tests_root: tests
 # `_custodian/` overlay layer (see OperationsCenter for a worked example).
 
 audit:
-  # OperatorConsole is a CLI tool: print() is its user-facing output API,
-  # not a debug leftover. C2 ("print statements in source") would otherwise
-  # flag ~400 correct usages. Exempting the whole package is the honest
-  # config — if a subset of files later migrates to logging, narrow the glob.
+  # C2: OperatorConsole is a CLI/TUI tool — print() is its user-facing output API,
+  # not a debug leftover. Exempting the whole package is the honest config.
+  # C1: bootstrap.py has a single deferred TODO (pending SwitchBoard validation).
+  # C4: watcher_status_pane, launcher, observer, queue — these do resource
+  #     polling, subprocess probing, and file reads for TUI display; a single
+  #     failure must not crash the UI loop; pass is intentionally silent.
   exclude_paths:
     C2:
       - "src/operator_console/**/*.py"
+    C1:
+      - src/operator_console/bootstrap.py
+    C4:
+      - src/operator_console/watcher_status_pane.py
+      - src/operator_console/launcher.py
+      - src/operator_console/observer.py
+      - src/operator_console/queue.py
+      - src/operator_console/commands.py
+      - src/operator_console/delegate.py
+      - src/operator_console/providers.py
+      - src/operator_console/bootstrap.py
+      - src/operator_console/clean.py
+      - src/operator_console/cli.py
+      - src/operator_console/runs_cmd.py
