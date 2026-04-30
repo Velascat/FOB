@@ -30,6 +30,13 @@ audit:
       - src/operator_console/clean.py
       - src/operator_console/cli.py
       - src/operator_console/runs_cmd.py
+    C10:
+      # These files use datetime.now() to format a local-time display string
+      # ("saved_at": "2026-04-30 14:22") shown in the TUI. Local time is correct
+      # for UI labels; UTC would confuse users of a local desktop tool.
+      - src/operator_console/bootstrap.py
+      - src/operator_console/session_group.py
+      - src/operator_console/layout.py
     C9:
       # OperatorConsole is a TUI application with no logging infrastructure.
       # Broad exception catches throughout the codebase are intentional resilience
