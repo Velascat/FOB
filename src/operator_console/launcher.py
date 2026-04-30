@@ -28,7 +28,7 @@ def _watcher_status_pane_cmd(key: str = "default", profile: str = "") -> str:
         f"    python3 -m operator_console.watcher_status_pane{profile_arg}\n"
         "    sleep 1\n"
         "done\n"
-    )
+    , encoding="utf-8")
     script_path.chmod(0o755)
     safe_path = str(script_path).replace("'", "'\\''")
     return f"bash '{safe_path}'"
@@ -218,7 +218,7 @@ def _saved_panes_kdl(profile: dict, console_dir: Path) -> str | None:
     kdl_path = console_dir / "config" / "profiles" / f"{name.lower()}.kdl"
     if kdl_path.exists():
         try:
-            return kdl_path.read_text()
+            return kdl_path.read_text(encoding="utf-8")
         except Exception:
             pass
     return None
@@ -246,7 +246,7 @@ def generate_session_kdl(profiles: list[dict], console_dir: Path, tab_name: str 
 def generate_session_layout(profiles: list[dict], console_dir: Path, tab_name: str | None = None) -> Path:
     """Write session layout to /tmp, return path."""
     tmp = Path(tempfile.gettempdir()) / "console-session.kdl"
-    tmp.write_text(generate_session_kdl(profiles, console_dir, tab_name=tab_name))
+    tmp.write_text(generate_session_kdl(profiles, console_dir, tab_name=tab_name), encoding="utf-8")
     return tmp
 
 
@@ -260,7 +260,7 @@ def generate_tab_layout(profiles: list[dict], console_dir: Path, tab_name: str |
         panes = _multi_pane_block(profiles, console_dir, indent="    ", tab_name=name)
 
     tmp = Path(tempfile.gettempdir()) / f"console-tab-{name}.kdl"
-    tmp.write_text(_tab_chrome_wrap(panes))
+    tmp.write_text(_tab_chrome_wrap(panes), encoding="utf-8")
     return tmp, name
 
 

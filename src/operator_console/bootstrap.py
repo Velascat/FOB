@@ -52,7 +52,7 @@ def build_resume_prompt(
     for filename, label in files_to_read:
         path = console_dir / filename
         if path.exists():
-            content = path.read_text().strip()
+            content = path.read_text(encoding="utf-8").strip()
             if content:
                 sections.append(f"## {label}\n\n{content}")
 
@@ -62,7 +62,7 @@ def build_resume_prompt(
             for filename, label in PEER_FILES:
                 path = peer_console / filename
                 if path.exists():
-                    content = path.read_text().strip()
+                    content = path.read_text(encoding="utf-8").strip()
                     if content:
                         sections.append(f"## Peer: {peer_name} — {label}\n\n{content}")
 
@@ -104,7 +104,7 @@ def write_bootstrap_file(
 ) -> Path:
     prompt = build_resume_prompt(repo_root, files, peer_roots, profile_name)
     out = repo_root / ".console" / ".context"
-    out.write_text(prompt)
+    out.write_text(prompt, encoding="utf-8")
     return out
 
 
@@ -158,7 +158,7 @@ def get_claude_command(
     )
 
     script_path = Path(tempfile.gettempdir()) / f"console-claude-{key}.sh"
-    script_path.write_text(script)
+    script_path.write_text(script, encoding="utf-8")
     script_path.chmod(0o755)
 
     safe_path = str(script_path).replace("'", "'\\''")
@@ -240,7 +240,7 @@ def get_codex_command(
             )
 
     script_path = Path(tempfile.gettempdir()) / f"console-codex-{key}.sh"
-    script_path.write_text(script)
+    script_path.write_text(script, encoding="utf-8")
     script_path.chmod(0o755)
 
     safe_path = str(script_path).replace("'", "'\\''")
@@ -268,7 +268,7 @@ def get_aider_command(
 
     key = (session_key or profile.get("name", "unknown")).lower()
     script_path = Path(tempfile.gettempdir()) / f"console-aider-{key}.sh"
-    script_path.write_text(script)
+    script_path.write_text(script, encoding="utf-8")
     script_path.chmod(0o755)
 
     safe_path = str(script_path).replace("'", "'\\''")
@@ -313,7 +313,7 @@ After meaningful progress, update `.console/backlog.md` and `.console/log.md`.
 Do not edit `.console/.context` directly — it is regenerated at each launch.
 """
     if claude_md.exists():
-        existing = claude_md.read_text()
+        existing = claude_md.read_text(encoding="utf-8")
         if marker in existing:
             # Replace existing console block
             import re
@@ -323,11 +323,11 @@ Do not edit `.console/.context` directly — it is regenerated at each launch.
                 existing,
                 flags=re.DOTALL,
             )
-            claude_md.write_text(new_text.rstrip() + "\n")
+            claude_md.write_text(new_text.rstrip() + "\n", encoding="utf-8")
         else:
-            claude_md.write_text(existing.rstrip() + "\n\n" + block + "\n")
+            claude_md.write_text(existing.rstrip() + "\n\n" + block + "\n", encoding="utf-8")
     else:
-        claude_md.write_text(block + "\n")
+        claude_md.write_text(block + "\n", encoding="utf-8")
 
 
 # ── CLI update helpers ────────────────────────────────────────────────────────

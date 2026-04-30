@@ -19,7 +19,7 @@ def save(profile_names: list[str], session_name: str) -> Path:
         "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
     path = _STATE_DIR / _LAST_GROUP
-    path.write_text(json.dumps(data, indent=2) + "\n")
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return path
 
 
@@ -29,6 +29,6 @@ def load() -> dict | None:
     if not path.exists():
         return None
     try:
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None

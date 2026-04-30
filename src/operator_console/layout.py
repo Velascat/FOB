@@ -23,7 +23,7 @@ def save(repo_root: Path, profile_name: str, kdl_content: str) -> dict:
     """Write layout KDL + metadata. Returns the metadata dict."""
     console_dir = repo_root / ".console"
     console_dir.mkdir(exist_ok=True)
-    _kdl_path(repo_root).write_text(kdl_content)
+    _kdl_path(repo_root).write_text(kdl_content, encoding="utf-8")
     meta = {
         "backend":      BACKEND,
         "repo_root":    str(repo_root.resolve()),
@@ -31,7 +31,7 @@ def save(repo_root: Path, profile_name: str, kdl_content: str) -> dict:
         "saved_at":     datetime.now().strftime("%Y-%m-%d %H:%M"),
         "kdl_file":     f".console/{LAYOUT_KDL}",
     }
-    _json_path(repo_root).write_text(json.dumps(meta, indent=2) + "\n")
+    _json_path(repo_root).write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
     return meta
 
 
@@ -42,7 +42,7 @@ def load(repo_root: Path) -> tuple[dict, Path] | None:
     if not jp.exists() or not kp.exists():
         return None
     try:
-        meta = json.loads(jp.read_text())
+        meta = json.loads(jp.read_text(encoding="utf-8"))
     except Exception:
         return None
     saved_root = Path(meta.get("repo_root", "")).resolve()
@@ -61,7 +61,7 @@ def load_any(repo_root: Path) -> tuple[dict, Path, bool] | None:
     if not jp.exists() or not kp.exists():
         return None
     try:
-        meta = json.loads(jp.read_text())
+        meta = json.loads(jp.read_text(encoding="utf-8"))
     except Exception:
         return None
     saved_root = Path(meta.get("repo_root", "")).resolve()

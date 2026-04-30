@@ -66,7 +66,7 @@ def _plane_config() -> dict | None:
     }
     in_plane = False
     try:
-        for raw in _OC_CONFIG.read_text().splitlines():
+        for raw in _OC_CONFIG.read_text(encoding="utf-8").splitlines():
             stripped = raw.rstrip()
             if not stripped or stripped.lstrip().startswith("#"):
                 continue
@@ -107,7 +107,7 @@ def _read_token_from_env_file(token_env: str) -> str:
     if not env_file.exists():
         return ""
     try:
-        for raw in env_file.read_text().splitlines():
+        for raw in env_file.read_text(encoding="utf-8").splitlines():
             line = raw.strip()
             if not line or line.startswith("#") or "=" not in line:
                 continue
@@ -228,7 +228,7 @@ def _role_info(role: str) -> dict:
     if not pid_file.exists():
         return {"alive": False, "pid": "", "mtime": None}
     try:
-        pid = pid_file.read_text().strip()
+        pid = pid_file.read_text(encoding="utf-8").strip()
         alive = _pid_alive(pid)
         return {"alive": alive, "pid": pid, "mtime": pid_file.stat().st_mtime if alive else None}
     except Exception:
@@ -240,7 +240,7 @@ def _restart_counts() -> dict[str, int]:
     counts: dict[str, int] = {}
     for log in _WATCH_DIR.glob("*.log"):
         try:
-            for line in log.read_text(errors="replace").splitlines():
+            for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
                 if "watcher_restart" not in line:
                     continue
                 try:
@@ -258,7 +258,7 @@ def _restart_counts() -> dict[str, int]:
 def _active_campaigns() -> list[dict]:
     f = _STATE_DIR / "campaigns" / "active.json"
     try:
-        return json.loads(f.read_text()).get("campaigns", [])
+        return json.loads(f.read_text(encoding="utf-8")).get("campaigns", [])
     except Exception:
         return []
 
@@ -292,7 +292,7 @@ def _sys_resources() -> dict:
     mem_used_gb = mem_total_gb = swap_used_gb = swap_total_gb = 0.0
     try:
         info: dict[str, int] = {}
-        for line in Path("/proc/meminfo").read_text().splitlines():
+        for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
             k, *v = line.split()
             if v:
                 info[k.rstrip(":")] = int(v[0])
@@ -344,7 +344,7 @@ def _queue_items(repo_filter: set[str] | None) -> list[dict]:
         return items
     for f in sorted(_QUEUE_DIR.glob("*.json")):
         try:
-            item = json.loads(f.read_text())
+            item = json.loads(f.read_text(encoding="utf-8"))
             if repo_filter is None or item.get("repo_name") in repo_filter:
                 items.append(item)
         except Exception:
@@ -435,7 +435,7 @@ def _recent_activity() -> list[dict]:
         if mtime < cutoff:
             continue
         try:
-            text = log.read_text(errors="replace")
+            text = log.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
         # Walk lines newest-first; stop after a few hits per role
@@ -775,7 +775,7 @@ def _read_log_lines(role: str) -> list[str]:
     if not log:
         return ["(no log file found)"]
     try:
-        return log.read_text(errors="replace").splitlines()[-LOG_TAIL_LINES:]
+        return log.read_text(encoding="utf-8", errors="replace").splitlines()[-LOG_TAIL_LINES:]
     except Exception as e:
         return [f"(error: {e})"]
 

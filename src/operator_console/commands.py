@@ -45,9 +45,9 @@ def cmd_init(args: list[str], console_dir: Path) -> None:
             skipped.append(name)
         else:
             if src.exists():
-                dst.write_text(src.read_text())
+                dst.write_text(src.read_text(encoding="utf-8"))
             else:
-                dst.write_text(f"# {name.replace('.md','').replace('-',' ').title()}\n\n")
+                dst.write_text(f"# {name.replace('.md','').replace('-',' ').title()}\n\n", encoding="utf-8")
             created.append(name)
 
     from operator_console.bootstrap import ensure_claude_md
@@ -167,7 +167,7 @@ def cmd_status(
 def _task_snippet(path: Path, max_len: int = 60) -> str:
     """Return first non-empty, non-heading line from a task file."""
     try:
-        for line in path.read_text().splitlines():
+        for line in path.read_text(encoding="utf-8").splitlines():
             stripped = line.strip()
             if stripped and not stripped.startswith("#"):
                 return stripped[:max_len] + ("…" if len(stripped) > max_len else "")
@@ -824,7 +824,7 @@ def cmd_save(args: list[str], default_profile: dict | None, console_dir: Path) -
         print(c("  Make sure the tab is open and try again.", "DIM"))
         sys.exit(1)
 
-    kdl_path.write_text(panes)
+    kdl_path.write_text(panes, encoding="utf-8")
     print(c(f"  ✓ saved  config/profiles/{kdl_path.name}", "GRN"))
     print(c(f"  Next `console open {profile_name}` will use this layout.", "DIM"))
     print(c(f"  Run `console save --reset {profile_name}` to revert to YAML-generated.", "DIM"))
@@ -912,7 +912,7 @@ def cmd_install(args: list[str], console_dir: Path) -> None:
     rc = Path.home() / ".bashrc"
     local_bin_str = str(local_bin)
     if local_bin_str not in os.environ.get("PATH", "").split(":"):
-        if rc.exists() and local_bin_str in rc.read_text():
+        if rc.exists() and local_bin_str in rc.read_text(encoding="utf-8"):
             pass  # already in .bashrc, just not sourced yet
         else:
             with rc.open("a") as f:

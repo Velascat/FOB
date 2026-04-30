@@ -50,7 +50,7 @@ def _watcher_status() -> dict[str, str]:
         pid_file = _WATCH_DIR / f"{role}.pid"
         if pid_file.exists():
             try:
-                pid = pid_file.read_text().strip()
+                pid = pid_file.read_text(encoding="utf-8").strip()
                 alive = subprocess.run(
                     ["kill", "-0", pid], capture_output=True, timeout=3
                 ).returncode == 0

@@ -252,7 +252,7 @@ def _discover_repos() -> dict[str, dict]:
     # Overlay configured profiles (they override auto-discovered by repo_root match)
     for p in PROFILES_DIR.glob("*.yaml"):
         try:
-            data = yaml.safe_load(p.read_text())
+            data = yaml.safe_load(p.read_text(encoding="utf-8"))
             if not data:
                 continue
             from operator_console.profile_loader import _expand_paths
