@@ -277,9 +277,9 @@ def _sys_resources() -> dict:
     load_pct = "?"
     num_cores = 0
     try:
-        parts = Path("/proc/loadavg").read_text().split()
+        parts = Path("/proc/loadavg").read_text(encoding="ascii").split()
         load = f"{parts[0]}/{parts[1]}/{parts[2]}"
-        with open("/proc/cpuinfo") as f:
+        with open("/proc/cpuinfo", encoding="ascii") as f:
             num_cores = f.read().count("processor")
         if num_cores > 0:
             l1, l5, l15 = float(parts[0]), float(parts[1]), float(parts[2])
