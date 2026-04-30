@@ -29,7 +29,7 @@ def _http_ok(url: str) -> bool:
 def _which(binary: str) -> bool:
     import subprocess
     try:
-        return subprocess.run(["which", binary], capture_output=True).returncode == 0
+        return subprocess.run(["which", binary], capture_output=True, timeout=3).returncode == 0
     except Exception:
         return False
 
@@ -52,7 +52,7 @@ def _watcher_status() -> dict[str, str]:
             try:
                 pid = pid_file.read_text().strip()
                 alive = subprocess.run(
-                    ["kill", "-0", pid], capture_output=True
+                    ["kill", "-0", pid], capture_output=True, timeout=3
                 ).returncode == 0
                 statuses[role] = "running" if alive else "stopped"
             except Exception:
