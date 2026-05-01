@@ -49,3 +49,8 @@ audit:
       # patterns: a failing status poll, subprocess probe, or display render must
       # not crash the terminal UI. Exceptions are silently swallowed by design.
       - "src/operator_console/**/*.py"
+
+tools:
+  ruff: true
+  vulture: true
+  # mypy/ty: enable when type annotations are stable
