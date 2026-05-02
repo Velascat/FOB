@@ -13,6 +13,12 @@ audit:
   # C4: watcher_status_pane, launcher, observer, queue — these do resource
   #     polling, subprocess probing, and file reads for TUI display; a single
   #     failure must not crash the UI loop; pass is intentionally silent.
+  # C13: OperatorConsole is a TUI/CLI tool that reads env vars for tool paths,
+  #      profile config, and terminal capabilities. There is no separate config
+  #      layer — env access is the config layer.
+  c13_allowed_paths:
+    - "src/operator_console/**/*.py"
+
   exclude_paths:
     C2:
       - "src/operator_console/**/*.py"
@@ -69,6 +75,11 @@ audit:
       # OperatorConsole is a TUI application — bootstrap, command dispatch,
       # and display modules are validated through integration use, not unit tests.
       - "src/operator_console/**/*.py"
+
+  # K1 suppressions: config key names in architecture docs that are not Python
+  # def/class names but appear in implementation context ("has `status_repos`").
+  common_words:
+    - status_repos
 
 tools:
   ruff: true
