@@ -49,6 +49,19 @@ audit:
       # patterns: a failing status poll, subprocess probe, or display render must
       # not crash the terminal UI. Exceptions are silently swallowed by design.
       - "src/operator_console/**/*.py"
+    T2:
+      # These tests validate that valid execution results pass JSON schema validation.
+      # validate_inbound_execution_result() returns None and raises ValidationError on
+      # failure — "should not raise" tests are correctly assertion-free.
+      - tests/test_cxrp_capture.py
+    C29:
+      # TUI command-dispatch and panel modules are large by design.
+      # cli.py: full CLI argument dispatch + subcommand table.
+      # commands.py: all interactive TUI commands + run management.
+      # watcher_status_pane.py: full status pane with multiple sub-panels.
+      - src/operator_console/cli.py
+      - src/operator_console/commands.py
+      - src/operator_console/watcher_status_pane.py
 
 tools:
   ruff: true
