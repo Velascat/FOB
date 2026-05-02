@@ -2,8 +2,11 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
-.console/
-!.console/*.example*
+.console/*
+!.console/task.md
+!.console/backlog.md
+!.console/guidelines.md
+!.console/log.md
 
 # Profiles are private by default; only platform-group members are tracked.
 config/profiles/*.yaml

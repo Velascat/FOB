@@ -1,4 +1,4 @@
-# Current Focus
+# Current Task
 
 _Update this file when the active objective changes._
 

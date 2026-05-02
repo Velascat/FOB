@@ -1,4 +1,4 @@
-# Guardrails
+# Guidelines
 
 Operating rules for Claude in this repo.
 
@@ -10,9 +10,9 @@ Operating rules for Claude in this repo.
 
 ## Before Acting
 
-1. Read `.console/current-focus.md` — understand the active objective.
-2. Read `.console/todo.md` — check what's in progress and what's next.
-3. Read `.console/session.md` — review recent decisions and context.
+1. Read `.console/task.md` — understand the active objective.
+2. Read `.console/backlog.md` — check what's in progress and what's next.
+3. Read `.console/log.md` — review recent decisions and context.
 4. Summarize your plan before making edits.
 
 ## During Work
@@ -24,8 +24,8 @@ Operating rules for Claude in this repo.
 
 ## After Meaningful Progress
 
-- Update `.console/todo.md` to reflect completed and remaining work.
-- Update `.console/session.md` with decisions made and rationale.
+- Update `.console/backlog.md` to reflect completed and remaining work.
+- Update `.console/log.md` with decisions made and rationale.
 - Summarize what changed and what's next.
 
 ## What Not to Do
