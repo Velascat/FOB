@@ -56,7 +56,7 @@ def run_clean(args: list[str]) -> int:
         print(_c(f"  {len(all_runs)} run(s) present — fewer than keep={keep}, nothing to remove.", "DIM"))
         return 0
 
-    print(_c(f"\n  console clean", "B", "CYN") + _c(f" — keeping {keep} most recent runs", "DIM"))
+    print(_c("\n  console clean", "B", "CYN") + _c(f" — keeping {keep} most recent runs", "DIM"))
     print()
     print(_c(f"  Total runs : {len(all_runs)}", "DIM"))
     print(_c(f"  To delete  : {len(to_delete)}", "DIM"))

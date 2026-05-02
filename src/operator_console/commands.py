@@ -45,7 +45,7 @@ def cmd_init(args: list[str], console_dir: Path) -> None:
             skipped.append(name)
         else:
             if src.exists():
-                dst.write_text(src.read_text(encoding="utf-8"))
+                dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
             else:
                 dst.write_text(f"# {name.replace('.md','').replace('-',' ').title()}\n\n", encoding="utf-8")
             created.append(name)
