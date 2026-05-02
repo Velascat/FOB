@@ -457,7 +457,12 @@ def _require_zellij() -> None:
         sys.exit(1)
 
 
-def _run_open(profiles: list[dict], use_saved_layout: bool = False, tab_name: str | None = None) -> None:
+def _run_open(
+    profiles: list[dict],
+    use_saved_layout: bool = False,
+    tab_name: str | None = None,
+    force_branch: bool = False,
+) -> None:
     """Core launch flow shared by `console open`, `console multi`, and `console context`."""
     from operator_console.profile_loader import load_profile
     from operator_console.launcher import launch, CONSOLE_SESSION
@@ -533,7 +538,8 @@ def _run_open(profiles: list[dict], use_saved_layout: bool = False, tab_name: st
             if snip:
                 print(f"  {c('task     ', 'DIM')}{c(snip, 'DIM')}")
     print()
-    launch(profiles, CONSOLE_DIR, saved_layout_path=saved_layout_path, tab_name=tab_name)
+    launch(profiles, CONSOLE_DIR, saved_layout_path=saved_layout_path, tab_name=tab_name,
+           force_branch=force_branch)
 
 
 # ── dispatch ──────────────────────────────────────────────────────────────────
@@ -563,7 +569,10 @@ def main() -> None:
         case "open":
             _require_zellij()
             use_saved_layout = "--layout" in args
-            named = [a for a in args if not a.startswith("--")]
+            force_branch = "--force-branch" in args
+            # Strip flag-only args before extracting positional names
+            open_args = [a for a in args if a not in ("--layout", "--force-branch")]
+            named = [a for a in open_args if not a.startswith("--")]
             if named:
                 from operator_console.profile_loader import load_profile, validate_profile
                 raw = []
@@ -582,7 +591,8 @@ def main() -> None:
                         sys.exit(1)
             else:
                 profiles, tab_name = _autopick()
-            _run_open(profiles, use_saved_layout=use_saved_layout, tab_name=tab_name)
+            _run_open(profiles, use_saved_layout=use_saved_layout, tab_name=tab_name,
+                      force_branch=force_branch)
 
         case "multi":
             _require_zellij()
@@ -708,10 +718,18 @@ def main() -> None:
             commands.cmd_cheat(args, SCRIPTS_DIR)
 
         case "update":
-            commands.cmd_update(args)
+            if "--background" in args:
+                from operator_console.bootstrap import spawn_update_clis_background, _UPDATE_LOG
+                spawn_update_clis_background()
+                print(c(f"  CLI update started in background — log: {_UPDATE_LOG}", "DIM"))
+            else:
+                commands.cmd_update(args)
 
         case "install":
             commands.cmd_loadout(args, SCRIPTS_DIR)
+
+        case "symlink":
+            commands.cmd_install(args, CONSOLE_DIR)
 
         case "rewatch":
             commands.cmd_rewatch(args, CONSOLE_DIR)

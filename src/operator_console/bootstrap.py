@@ -247,6 +247,63 @@ def get_codex_command(
     return f"bash '{safe_path}'"
 
 
+def get_aider_command(
+    profile: dict,
+    repo_root: Path,
+    console_dir: Path | None = None,
+    session_key: str | None = None,
+) -> str:
+    """Return a shell command string that launches aider, or a usable shell if not installed.
+
+    Reads aider config from profile.get("aider", {}):
+      - bin: binary name (default "aider")
+      - model: model name (default None — uses aider's own default)
+      - auto_commits: bool (default True; False adds --no-auto-commits)
+    """
+    import tempfile
+
+    aider_cfg    = profile.get("aider", {})
+    aider_bin    = aider_cfg.get("bin", "aider")
+    safe_bin     = aider_bin.replace("'", "'\\''")
+    model        = aider_cfg.get("model", None)
+    auto_commits = aider_cfg.get("auto_commits", True)
+
+    safe_repo = str(repo_root).replace("'", "'\\''")
+
+    not_found_block = (
+        "#!/usr/bin/env bash\n"
+        f"if ! command -v '{safe_bin}' &>/dev/null; then\n"
+        "  echo 'aider not found.'\n"
+        "  echo 'Install: pip install aider-chat'\n"
+        "  exec bash -l\n"
+        "fi\n"
+    )
+
+    # Build aider argument list
+    extra_args = ""
+    if model:
+        safe_model = model.replace("'", "'\\''")
+        extra_args += f" '--model={safe_model}'"
+    if not auto_commits:
+        extra_args += " '--no-auto-commits'"
+
+    key = (session_key or profile.get("name", "unknown")).lower()
+
+    script = (
+        not_found_block
+        + f"cd '{safe_repo}'\n"
+        + f"'{safe_bin}'{extra_args}\n"
+        + "exec bash -l\n"
+    )
+
+    script_path = Path(tempfile.gettempdir()) / f"console-aider-{key}.sh"
+    script_path.write_text(script, encoding="utf-8")
+    script_path.chmod(0o755)
+
+    safe_path = str(script_path).replace("'", "'\\''")
+    return f"bash '{safe_path}'"
+
+
 def ensure_claude_md(
     repo_root: Path,
     templates_dir: Path,
@@ -310,6 +367,25 @@ _CLI_UPDATES: list[tuple[str, list[str]]] = [
     ("codex",   ["npm", "install", "-g", "@openai/codex"]),
     ("aider",   ["pipx", "upgrade", "aider-chat"]),
 ]
+
+
+_UPDATE_LOG = Path("/tmp/console-cli-update.log")
+
+
+def spawn_update_clis_background() -> None:
+    """Fire-and-forget background CLI update; output goes to /tmp/console-cli-update.log."""
+    import sys
+    log = _UPDATE_LOG.open("w")
+    try:
+        subprocess.Popen(
+            [sys.executable, "-c",
+             "from operator_console.bootstrap import update_clis; r = update_clis(); "
+             "[print(f'{k}: {v}') for k,v in r.items()]"],
+            stdout=log, stderr=log,
+            start_new_session=True,
+        )
+    except Exception:
+        pass
 
 
 def update_clis(*, verbose: bool = False) -> dict[str, str]:

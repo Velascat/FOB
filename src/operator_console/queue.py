@@ -69,3 +69,12 @@ def list_pending() -> list[dict]:
     return items
 
 
+def remove(task_id: str) -> bool:
+    """Delete a queue item by id. Returns True if it existed."""
+    path = queue_dir() / f"{task_id}.json"
+    if path.exists():
+        path.unlink()
+        return True
+    return False
+
+

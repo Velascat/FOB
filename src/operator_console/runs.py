@@ -61,20 +61,28 @@ def read_proposal(run_dir: Path) -> dict:
     return read_json(run_dir / "proposal.json")
 
 
+def read_decision(run_dir: Path) -> dict:
+    return read_json(run_dir / "decision.json")
+
 
 def run_summary(run_dir: Path) -> dict:
-    """Return a flat summary dict for display — merges metadata + result + proposal fields."""
+    """Return a flat summary dict for display — merges metadata + result + proposal + decision fields."""
     meta = read_metadata(run_dir)
     result = read_result(run_dir)
     proposal = read_proposal(run_dir)
+    decision = read_decision(run_dir)
+
+    # Prefer metadata for lane/backend (written at execution time); fall back to decision
+    selected_lane = meta.get("selected_lane") or decision.get("selected_lane", "?")
+    selected_backend = meta.get("selected_backend") or decision.get("selected_backend", "?")
 
     return {
         "run_id": meta.get("run_id", run_dir.name),
         "status": meta.get("status", result.get("status", "unknown")),
         "success": meta.get("success", result.get("success")),
         "executed": meta.get("executed"),
-        "selected_lane": meta.get("selected_lane", "?"),
-        "selected_backend": meta.get("selected_backend", "?"),
+        "selected_lane": selected_lane,
+        "selected_backend": selected_backend,
         "failure_category": meta.get("failure_category"),
         "failure_reason": result.get("failure_reason"),
         "written_at": meta.get("written_at"),
@@ -84,4 +92,7 @@ def run_summary(run_dir: Path) -> dict:
         "task_type": proposal.get("task_type"),
         "repo_key": proposal.get("target", {}).get("repo_key"),
         "artifacts_dir": str(run_dir),
+        # Decision fields (populated when decision.json is present)
+        "decision_basis": decision.get("policy_rule_matched") or decision.get("rationale"),
+        "decision_confidence": decision.get("confidence"),
     }

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from operator_console.session import session_exists
 from operator_console.guardrails import check_branch
-from operator_console.bootstrap import get_claude_command, get_codex_command
+from operator_console.bootstrap import get_claude_command, get_codex_command, get_aider_command
 
 
 CONSOLE_SESSION = "operator_console"
@@ -60,6 +60,7 @@ def _single_pane_block(
     profile_name = profile.get("name", "single")
     claude_cmd   = get_claude_command(profile, Path(repo), console_dir=console_dir, claude_cwd=claude_cwd)
     codex_cmd    = get_codex_command(profile, Path(repo), console_dir=console_dir)
+    aider_cmd    = get_aider_command(profile, Path(repo), console_dir=console_dir, session_key=profile_name)
     status_cmd   = _watcher_status_pane_cmd(key=profile_name, profile=profile_name)
 
     return (
@@ -68,7 +69,7 @@ def _single_pane_block(
         f'{i}    pane size="28%" name="git" command="bash" {{\n'
         f'{i}        args "-c" "cd \'{safe_repo}\' && {git_cmd}; exec bash -l"\n'
         f'{i}    }}\n'
-        # Center: stacked chats — claude / codex
+        # Center: stacked chats — claude / codex / aider
         f'{i}    pane {{\n'
         f'{i}        pane stacked=true {{\n'
         f'{i}            pane name="claude" focus=true command="bash" {{\n'
@@ -76,6 +77,9 @@ def _single_pane_block(
         f'{i}            }}\n'
         f'{i}            pane name="codex" command="bash" {{\n'
         f'{i}                args "-c" "cd \'{safe_cwd}\' && {codex_cmd}"\n'
+        f'{i}            }}\n'
+        f'{i}            pane name="aider" command="bash" {{\n'
+        f'{i}                args "-c" "cd \'{safe_cwd}\' && {aider_cmd}"\n'
         f'{i}            }}\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
@@ -118,6 +122,10 @@ def _multi_pane_block(
         profiles[0], _GITHUB_DIR,
         console_dir=console_dir, session_key=session_key,
     )
+    aider_cmd = get_aider_command(
+        profiles[0], _GITHUB_DIR,
+        console_dir=console_dir, session_key=session_key,
+    )
 
     # Left column: single interactive git-dirty watcher (replaces N lazygit instances).
     # Enter on a repo execs lazygit for it; the restart loop brings the watcher back.
@@ -134,7 +142,7 @@ def _multi_pane_block(
         f'{i}    }}\n'
     )
 
-    # Center: stacked chats — claude / codex
+    # Center: stacked chats — claude / codex / aider
     center_block = (
         f'{i}    pane {{\n'
         f'{i}        pane stacked=true {{\n'
@@ -143,6 +151,9 @@ def _multi_pane_block(
         f'{i}            }}\n'
         f'{i}            pane name="codex" command="bash" {{\n'
         f'{i}                args "-c" "cd \'{safe_cwd}\' && {codex_cmd}"\n'
+        f'{i}            }}\n'
+        f'{i}            pane name="aider" command="bash" {{\n'
+        f'{i}                args "-c" "cd \'{safe_cwd}\' && {aider_cmd}"\n'
         f'{i}            }}\n'
         f'{i}        }}\n'
         f'{i}    }}\n'
@@ -314,9 +325,10 @@ def launch(
     console_dir: Path,
     saved_layout_path: Path | None = None,
     tab_name: str | None = None,
+    force_branch: bool = False,
 ) -> None:
     for profile in profiles:
-        check_branch(Path(profile["repo_root"]))
+        check_branch(Path(profile["repo_root"]), force=force_branch)
 
     _delete_dead_session(CONSOLE_SESSION)
 
