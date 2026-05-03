@@ -95,7 +95,7 @@ def run_status(args: list[str]) -> int:
             "watchers": watcher_statuses,
             "last_run": last,
         }
-        print(json.dumps(payload, indent=2, default=str))
+        print(json.dumps(payload, indent=2, default=str, ensure_ascii=False))
         return 0
 
     print(_c("\n  console status", "B", "CYN") + _c(" — system readiness", "DIM"))

@@ -38,7 +38,7 @@ def run_last(args: list[str]) -> int:
     if run_dir is None:
         if use_json:
             import json
-            print(json.dumps({"error": "no runs found", "runs_root": str(runs_root())}))
+            print(json.dumps({"error": "no runs found", "runs_root": str(runs_root())}, ensure_ascii=False))
         else:
             print(_c("  No runs found.", "DIM"))
             print(_c(f"  Expected location: {runs_root()}", "DIM"))
@@ -49,7 +49,7 @@ def run_last(args: list[str]) -> int:
 
     if use_json:
         import json
-        print(json.dumps(summary, indent=2, default=str))
+        print(json.dumps(summary, indent=2, default=str, ensure_ascii=False))
         return 0
 
     print(_c("\n  console last", "B", "CYN") + _c(" — most recent execution run", "DIM"))

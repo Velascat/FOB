@@ -260,7 +260,7 @@ def run_delegate(args: list[str], profile_repos: dict[str, Path] | None = None) 
         }
         if lane_hint:
             payload["lane_hint"] = lane_hint
-        print(json.dumps(payload, indent=2))
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
     else:
         lane_suffix = _c(f"  lane={lane_hint}", "YLW") if lane_hint else ""
         _ok(f"queued  {_c(repo_name, 'B')}  {_c(task_type, 'CYN')}  {_c(repr(goal), 'DIM')}{lane_suffix}")

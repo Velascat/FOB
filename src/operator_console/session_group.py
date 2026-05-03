@@ -19,7 +19,7 @@ def save(profile_names: list[str], session_name: str) -> Path:
         "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
     path = _STATE_DIR / _LAST_GROUP
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return path
 
 

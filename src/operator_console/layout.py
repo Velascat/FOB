@@ -31,7 +31,7 @@ def save(repo_root: Path, profile_name: str, kdl_content: str) -> dict:
         "saved_at":     datetime.now().strftime("%Y-%m-%d %H:%M"),
         "kdl_file":     f".console/{LAYOUT_KDL}",
     }
-    _json_path(repo_root).write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+    _json_path(repo_root).write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return meta
 
 

@@ -52,7 +52,7 @@ def run_runs(args: list[str]) -> int:
     all_runs = list_runs(root)
     if not all_runs:
         if use_json:
-            print(json.dumps({"runs": [], "runs_root": str(runs_root())}))
+            print(json.dumps({"runs": [], "runs_root": str(runs_root())}, ensure_ascii=False))
         else:
             print(_c("  No runs found.", "DIM"))
             print(_c(f"  Expected location: {runs_root()}", "DIM"))
@@ -64,7 +64,7 @@ def run_runs(args: list[str]) -> int:
     summaries = [run_summary(r) for r in recent]
 
     if use_json:
-        print(json.dumps({"runs": summaries, "total": len(all_runs)}, indent=2, default=str))
+        print(json.dumps({"runs": summaries, "total": len(all_runs)}, indent=2, default=str, ensure_ascii=False))
         return 0
 
     total = len(all_runs)

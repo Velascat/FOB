@@ -46,7 +46,7 @@ def run_queue(args: list[str]) -> int:
     items = list_pending()
 
     if use_json:
-        print(json.dumps(items, indent=2, default=str))
+        print(json.dumps(items, indent=2, default=str, ensure_ascii=False))
         return 0
 
     print(_c("\n  console queue", "B", "CYN") + _c(" — pending tasks", "DIM"))

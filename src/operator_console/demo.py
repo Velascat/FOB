@@ -108,7 +108,7 @@ def _http_get(url: str, timeout: float = 5.0) -> tuple[int, Any]:
 
 
 def _http_post(url: str, payload: dict[str, Any], timeout: float = 10.0) -> tuple[int, Any]:
-    data = json.dumps(payload).encode()
+    data = json.dumps(payload, ensure_ascii=False).encode()
     req = urllib.request.Request(url, data=data, method="POST")
     req.add_header("Content-Type", "application/json")
     try:
@@ -308,7 +308,7 @@ def step_execution(
         workspace.mkdir()
 
         bundle_file = tmp / "bundle.json"
-        bundle_file.write_text(json.dumps(bundle_data), encoding="utf-8")
+        bundle_file.write_text(json.dumps(bundle_data, ensure_ascii=False), encoding="utf-8")
 
         config_file = tmp / "operations_center.yaml"
         config_file.write_text(_DEMO_CP_CONFIG, encoding="utf-8")
@@ -453,7 +453,7 @@ def run_demo(args: list[str]) -> int:
             "run_id": run_id,
             "artifacts_dir": str(runs_root() / run_id) if run_id else None,
         }
-        print(json.dumps(summary, indent=2))
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
     else:
         _print_summary(result, run_id)
 
