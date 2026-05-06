@@ -7,6 +7,7 @@ _Not a task tracker — that's backlog.md. Keep entries concise and dated._
 
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| Add ExecutorRuntime, SourceRegistry, RxP to platform group | Three new repos joined the platform tab + git-dirty watcher; new profile yamls (bootstrap_files empty until repos grow .console/), `.gitignore` allowlist updated to track them | 2026-05-06 |
 | C41 json.dumps ensure_ascii=False | 13 json.dumps calls across 9 files now include ensure_ascii=False | 2026-05-03 |
 | Ruff style violations resolved | E701/E702/E741/F401 across clean.py, cli.py, delegate.py, observer.py, watcher_status_pane.py, git_watcher.py, commands.py, auto_once.py, tab_capture.py | 2026-05-03 |
 | CLAUDE.md: simplify console update instruction | "Before each commit" → "After meaningful progress" | 2026-05-02 |

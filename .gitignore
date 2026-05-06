@@ -16,6 +16,9 @@ config/profiles/*.yaml
 !config/profiles/switchboard.yaml
 !config/profiles/workstation.yaml
 !config/profiles/cxrp.yaml
+!config/profiles/executorruntime.yaml
+!config/profiles/sourceregistry.yaml
+!config/profiles/rxp.yaml
 
 # Saved tab layouts, session IDs, and generated rc files (always private)
 config/profiles/*.kdl

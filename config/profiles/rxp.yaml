@@ -1,0 +1,17 @@
+name: RxP
+repo_root: /home/dev/Documents/GitHub/RxP
+
+claude:
+  continue: true
+  bootstrap_files: []
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  shell:
+    command: bash
+
+helpers:
+  test: pytest -q
+  audit: ruff check .

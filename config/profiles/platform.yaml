@@ -6,3 +6,6 @@ group:
   - workstation
   - custodian
   - cxrp
+  - executorruntime
+  - sourceregistry
+  - rxp
