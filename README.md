@@ -12,7 +12,12 @@ OperatorConsole maintains a persistent workspace that you can leave and return t
 - **Auto-discovery** — every git repo under `~/Documents/GitHub/` appears in the picker automatically; no YAML required
 - **Group profiles** — define named groups (e.g. `platform`) to open multiple repos as a single tab with one command
 
-OperatorConsole is not a neutral bootstrap script or a multiplexer-agnostic tool. Zellij is a core dependency, and persistence is the point.
+## What OperatorConsole Is Not
+
+- A neutral bootstrap script or multiplexer-agnostic tool — Zellij is a core dependency, and persistence is the point
+- A platform lifecycle owner — stack up/down/health is delegated to WorkStation
+- A planning, routing, or execution engine — those are delegated to OperationsCenter and SwitchBoard via subprocess
+- A contract authority — canonical contracts live in CxRP/RxP
 
 ## Workspace Layout
 
