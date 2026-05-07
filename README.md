@@ -16,35 +16,38 @@ OperatorConsole is not a neutral bootstrap script or a multiplexer-agnostic tool
 
 ## Workspace Layout
 
+Three columns. The center and right columns each contain a Zellij **stack** —
+multiple panes occupying the same space, switchable with `Alt+↑/↓`.
+
 **Single repo:**
 ```
-┌────────────────────────────────────────────────────────┐
-│  OperatorConsole  │  YourRepo  │  ...                  │  ← tab bar
-├──────────┬──────────────────────────────┬──────────────┤
-│          │                              │   shell      │
-│ lazygit  │   claude / codex / aider     │  ──────────  │
-│  (28%)   │     (stacked in center)      │   status     │
-│          │                              │   (28%)      │
-└──────────┴──────────────────────────────┴──────────────┘
-│  NORMAL  │  console  │  ...                            │  ← status bar
+┌────────────────────────────────────────────────────────────┐
+│  OperatorConsole  │  YourRepo  │  ...                      │  ← tab bar
+├──────────┬──────────────────────────────┬──────────────────┤
+│          │  ┌─ claude ─┐  (stack)       │  ┌─ shell ──┐    │
+│ lazygit  │  │  codex   │                │  │  status  │    │
+│  (28%)   │  │  aider   │                │  │   ...    │    │
+│          │  └──────────┘                │  └──────────┘    │
+└──────────┴──────────────────────────────┴──────────────────┘
+│  NORMAL  │  console  │  ...                                │  ← status bar
 ```
 
-Left 28%: `lazygit`. Center: stacked `claude` / `codex` / `aider`. Right 28%: stacked `shell` + watcher `status` pane.
+Left 28%: `lazygit`. Center: a stack of `claude` / `codex` / `aider`. Right 28%: a stack of `shell` + watcher `status` pane.
 
 **Multi repo (`console multi` or group profile) — single tab:**
 ```
-┌──────────────────────────────────────────────────────┐
-│  platform  │  ...                                   │  ← tab bar (group name)
-├──────────────┬───────────────────────┬──────────────┤
-│ git_watcher  │                       │   shell      │
-│  repo-A ▸    │  claude/codex/aider   │  ──────────  │
-│  repo-B ▸    │      (GitHub/)        │   status     │
-│  repo-C ▸    │                       │   (28%)      │
-│  (28%)       │                       │              │
-└──────────────┴───────────────────────┴──────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  platform  │  ...                                            │  ← tab bar (group name)
+├──────────────┬─────────────────────────┬─────────────────────┤
+│ git_watcher  │  ┌─ claude ─┐  (stack)  │  ┌─ shell ──┐       │
+│  repo-A ▸    │  │  codex   │           │  │  status  │       │
+│  repo-B ▸    │  │  aider   │  GitHub/  │  │   ...    │       │
+│  repo-C ▸    │  └──────────┘           │  └──────────┘       │
+│  (28%)       │                         │                     │
+└──────────────┴─────────────────────────┴─────────────────────┘
 ```
 
-Left 28%: interactive `git_watcher` (curses; ↑↓ navigate, Enter → lazygit for that repo). Center: stacked `claude` / `codex` / `aider`, rooted at `~/Documents/GitHub/`. Right 28%: stacked `shell` + watcher `status` pane.
+Left 28%: interactive `git_watcher` (curses; ↑↓ navigate, Enter → lazygit for that repo). Center: a stack of `claude` / `codex` / `aider`, rooted at `~/Documents/GitHub/`. Right 28%: a stack of `shell` + watcher `status` pane.
 
 Tab naming: group profiles use the group name (`platform`); ad-hoc multi-select joins all repo names (`RepoA+RepoB+RepoC`).
 

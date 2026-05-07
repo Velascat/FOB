@@ -7,6 +7,7 @@ _Not a task tracker — that's backlog.md. Keep entries concise and dated._
 
 | Decision | Rationale | Date |
 |----------|-----------|------|
+| README workspace-layout diagrams corrected (round 2) | First pass still drew shell/status as horizontally split panes; they're actually a Zellij **stack** (overlapping, switchable). Redrew center and right columns with explicit stack notation so the diagram matches launcher.py and Zellij's actual rendering | 2026-05-06 |
 | README workspace-layout diagrams corrected | Single-repo and multi-repo ASCII diagrams + descriptions described an older layout (status bottom-left, shell as center pane, logs on right; stacked lazygits in multi). Replaced with current: lazygit | claude/codex/aider | shell+status (single); git_watcher | claude/codex/aider | shell+status (multi). Source of truth: src/operator_console/launcher.py | 2026-05-06 |
 | README ownership boundary: contracts attributed to CxRP/RxP | Section listed contracts under OperationsCenter; canonical cross-repo contracts now live in CxRP/RxP. Updated to map Dockerfiles→WS, routing→SB, adapters→OC, contracts→CxRP/RxP | 2026-05-06 |
 | Add ExecutorRuntime, SourceRegistry, RxP to platform group | Three new repos joined the platform tab + git-dirty watcher; new profile yamls (bootstrap_files empty until repos grow .console/), `.gitignore` allowlist updated to track them | 2026-05-06 |
