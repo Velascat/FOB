@@ -252,28 +252,49 @@ def cmd_audit(args: list[str], default_profile: dict | None) -> None:
 
 # ── doctor ────────────────────────────────────────────────────────────────────
 
+
+def _detect_pkg_manager() -> str:
+    for pm in ("pacman", "apt", "brew"):
+        try:
+            r = subprocess.run(["which", pm], capture_output=True, text=True)
+            if r.returncode == 0:
+                return pm
+        except Exception:
+            pass
+    return "apt"
+
+
+def _pkg_hint(pacman_pkg: str, apt_pkg: str | None = None) -> str:
+    pm = _detect_pkg_manager()
+    if pm == "pacman":
+        return f"sudo pacman -S {pacman_pkg}"
+    if pm == "brew":
+        return f"brew install {pacman_pkg}"
+    return f"sudo apt install {apt_pkg or pacman_pkg}"
+
+
 DEPS = [
     ("zellij",        ["zellij"],          "Terminal workspace manager — https://zellij.dev"),
     ("claude",        ["claude"],          "Claude Code CLI — https://claude.ai/code"),
-    ("lazygit",       ["lazygit"],         "Git TUI — brew install lazygit / apt install lazygit"),
+    ("lazygit",       ["lazygit"],         lambda: f"Git TUI — {_pkg_hint('lazygit')}"),
     ("git",           ["git"],             "Version control"),
     ("python3",       ["python3"],         "Python 3.x runtime"),
-    ("fzf",           ["fzf"],             "Fuzzy finder"),
-    ("inotifywait",   ["inotifywait"],     "Filesystem event watcher — apt install inotify-tools"),
+    ("fzf",           ["fzf"],             lambda: f"Fuzzy finder — {_pkg_hint('fzf')}"),
+    ("inotifywait",   ["inotifywait"],     lambda: f"Filesystem event watcher — {_pkg_hint('inotify-tools')}"),
 ]
 
 # Mirror of loadout.sh TOOLS — name, binary alternatives, description
 RICE_TOOLS = [
-    ("fzf",       ["fzf"],              "Fuzzy finder — Ctrl+R, file & dir search"),
-    ("bat",       ["bat", "batcat"],    "Syntax-highlighted cat"),
-    ("eza",       ["eza"],              "Modern ls — colors, icons, git status"),
-    ("ripgrep",   ["rg"],               "Fast grep for codebases"),
-    ("fd",        ["fd", "fdfind"],     "Smarter find"),
-    ("zoxide",    ["zoxide"],           "Smart cd — jump with z"),
-    ("delta",     ["delta"],            "Beautiful git diffs"),
-    ("lazygit",   ["lazygit"],            "Full git TUI — stage, commit, diff, log visually"),
-    ("starship",  ["starship"],         "Cross-shell prompt"),
-    ("fastfetch", ["fastfetch"],        "System info display"),
+    ("fzf",       ["fzf"],              lambda: f"Fuzzy finder — Ctrl+R, file & dir search  ({_pkg_hint('fzf')})"),
+    ("bat",       ["bat", "batcat"],    lambda: f"Syntax-highlighted cat  ({_pkg_hint('bat')})"),
+    ("eza",       ["eza"],              lambda: f"Modern ls — colors, icons, git status  ({_pkg_hint('eza')})"),
+    ("ripgrep",   ["rg"],               lambda: f"Fast grep for codebases  ({_pkg_hint('ripgrep')})"),
+    ("fd",        ["fd", "fdfind"],     lambda: f"Smarter find  ({_pkg_hint('fd', 'fd-find')})"),
+    ("zoxide",    ["zoxide"],           lambda: f"Smart cd — jump with z  ({_pkg_hint('zoxide')})"),
+    ("delta",     ["delta"],            lambda: f"Beautiful git diffs  ({_pkg_hint('git-delta', 'git-delta')})"),
+    ("lazygit",   ["lazygit"],          lambda: f"Full git TUI — stage, commit, diff, log visually  ({_pkg_hint('lazygit')})"),
+    ("starship",  ["starship"],         lambda: f"Cross-shell prompt  ({_pkg_hint('starship')})"),
+    ("fastfetch", ["fastfetch"],        lambda: f"System info display  ({_pkg_hint('fastfetch')})"),
 ]
 
 
@@ -284,11 +305,12 @@ def cmd_doctor(args: list[str], scripts_dir: Path | None = None) -> None:
     missing_core = []
     for name, binaries, desc in DEPS:
         found = _which_any(binaries)
+        hint = desc() if callable(desc) else desc
         if found:
             print(f"  {c('✓', 'GRN')} {c(name, 'B'):<20}  {c(found, 'DIM')}")
         else:
             missing_core.append(name)
-            print(f"  {c('✗', 'YLW')} {c(name, 'B'):<20}  {c('not found', 'DIM')}  ←  {desc}")
+            print(f"  {c('✗', 'YLW')} {c(name, 'B'):<20}  {c('not found', 'DIM')}  ←  {hint}")
     print()
 
     print(c("  TERMINAL TOOLS", "B", "CYN"))
@@ -296,11 +318,12 @@ def cmd_doctor(args: list[str], scripts_dir: Path | None = None) -> None:
     missing_tools = []
     for name, binaries, desc in RICE_TOOLS:
         found = _which_any(binaries)
+        hint = desc() if callable(desc) else desc
         if found:
             print(f"  {c('✓', 'GRN')} {c(name, 'B'):<20}  {c(found, 'DIM')}")
         else:
             missing_tools.append(name)
-            print(f"  {c('✗', 'DIM')} {c(name, 'DIM'):<20}  {c(desc, 'DIM')}")
+            print(f"  {c('✗', 'DIM')} {c(name, 'DIM'):<20}  {c(hint, 'DIM')}")
     print()
 
     if not missing_core and not missing_tools:
