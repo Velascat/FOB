@@ -337,22 +337,21 @@ def cmd_doctor(args: list[str], scripts_dir: Path | None = None) -> None:
     if missing_core:
         if manual_missing:
             for name in manual_missing:
-                desc = next(d for n, _, d in DEPS if n == name)
+                raw = next(d for n, _, d in DEPS if n == name)
+                desc = raw() if callable(raw) else raw
                 print(c(f"  {name}: manual install required — {desc}", "YLW"))
             print()
 
-    if installable and scripts_dir:
+    if installable:
         print(c(f"  {len(installable)} tool(s) missing — console install can install them", "YLW"))
         try:
             answer = input(c("  Install now? [y/N] ", "B"))
         except (EOFError, KeyboardInterrupt):
             answer = ""
         if answer.strip().lower() == "y":
-            os.execvp("bash", ["bash", str(scripts_dir / "loadout.sh"), "install"])
+            cmd_loadout([])
         else:
             print(c("  Run: console install  to install when ready", "DIM"))
-    elif installable:
-        print(c("  Run: console install  to install missing tools", "YLW"))
     print()
 
 
