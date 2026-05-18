@@ -31,13 +31,32 @@ TOOLS=(
   "bat|bat|bat batcat|Syntax-highlighted cat with line numbers"
   "eza|eza|eza|Modern ls — colors, icons, git status, tree view"
   "ripgrep|ripgrep|rg|Blazing fast grep — searches codebases instantly"
-  "fd|fd-find|fd fdfind|Smarter find — simpler syntax, respects .gitignore"
+  "fd|$([ "$PM" = "pacman" ] && echo fd || echo fd-find)|fd fdfind|Smarter find — simpler syntax, respects .gitignore"
   "zoxide|zoxide|zoxide|Smart cd — learns your dirs, jump with z"
   "delta|git-delta|delta|Beautiful git diffs with syntax highlighting"
   "lazygit|lazygit|lazygit|Full git TUI — stage, commit, diff, log visually"
   "starship|starship|starship|Cross-shell prompt — fast, informative, customizable"
   "fastfetch|fastfetch|fastfetch|System info display — the classic flex"
 )
+
+# ── Package manager detection ─────────────────────────────────────────────────
+detect_pm() {
+  if command -v pacman &>/dev/null; then echo "pacman"
+  elif command -v apt-get &>/dev/null; then echo "apt"
+  elif command -v brew &>/dev/null; then echo "brew"
+  else echo "unknown"
+  fi
+}
+PM=$(detect_pm)
+
+pm_install() {
+  case "$PM" in
+    pacman)  sudo pacman -S --noconfirm "$@" ;;
+    apt)     sudo apt-get install -y "$@" ;;
+    brew)    brew install "$@" ;;
+    *)       echo -e "${RED}✗ Unknown package manager — install manually: $*${R}"; return 1 ;;
+  esac
+}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 tool_installed() {
@@ -105,6 +124,10 @@ install_eza() {
 }
 
 install_delta() {
+  if [[ "$PM" == "pacman" ]]; then
+    pm_install git-delta
+    return
+  fi
   echo -e "${CYN}▶ Installing git-delta from GitHub releases...${R}"
   local ver
   ver=$(curl -s "https://api.github.com/repos/dandavison/delta/releases/latest" \
@@ -116,6 +139,10 @@ install_delta() {
 }
 
 install_fastfetch() {
+  if [[ "$PM" == "pacman" ]]; then
+    pm_install fastfetch
+    return
+  fi
   echo -e "${CYN}▶ Installing fastfetch from GitHub releases...${R}"
   curl -Lo /tmp/fastfetch.deb \
     "https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-amd64.deb"
@@ -138,8 +165,9 @@ install_all_missing() {
     esac
   done
   if [[ ${#apt_pkgs[@]} -gt 0 ]]; then
-    echo -e "${CYN}▶ apt install: ${apt_pkgs[*]}${R}"
-    sudo apt-get update -q && sudo apt-get install -y "${apt_pkgs[@]}"
+    echo -e "${CYN}▶ ${PM} install: ${apt_pkgs[*]}${R}"
+    [[ "$PM" == "apt" ]] && sudo apt-get update -q
+    pm_install "${apt_pkgs[@]}"
   fi
   echo
   echo -e "${GRN}✓ Done!${R}"
@@ -211,7 +239,7 @@ setup_delta() {
     echo -e "${YLW}⚠  delta not installed yet${R}"
     read -rp $'  install it now? [y/N] ' yn
     if [[ "${yn,,}" == "y" ]]; then
-      sudo apt-get install -y git-delta
+      pm_install git-delta
     else
       pause; main_menu; return
     fi

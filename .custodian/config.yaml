@@ -2,6 +2,23 @@ repo_key: OperatorConsole
 src_root: src
 tests_root: tests
 
+# ---------------------------------------------------------------------------
+# OS symmetry invariant
+# ---------------------------------------------------------------------------
+# All operator-facing commands must behave identically on Manjaro/XFCE and
+# Linux Mint/Cinnamon. Distro differences must be pushed into detection logic.
+#
+#   1. Package installs: use _detect_pkg_manager() in commands.py before
+#      calling any package manager. Raw apt-get/pacman without detection is
+#      a violation. tools/loadout.sh must use detect_pm() for all installs.
+#   2. console install and console doctor must show correct hints for both
+#      distros — _pkg_hint() in commands.py handles this automatically.
+#   3. Any new install or setup command must work on both distros.
+#
+# Cross-repo: co-owned by NetworkRuntime (VPN scripts) and
+# SyncingSolution (tray, fleet setup).
+# Reference: NetworkRuntime/README.md § OS symmetry invariant.
+
 # Minimum baseline — runs Custodian's generic C1-C8 only.
 # Add `plugins:` and `detectors:` here when this repo grows its own
 # `_custodian/` overlay layer (see OperationsCenter for a worked example).
