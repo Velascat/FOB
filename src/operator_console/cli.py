@@ -740,7 +740,7 @@ def main() -> None:
                 commands.cmd_update(args)
 
         case "install":
-            commands.cmd_loadout(args, SCRIPTS_DIR)
+            commands.cmd_loadout(args)
 
         case "symlink":
             commands.cmd_install(args, CONSOLE_DIR)

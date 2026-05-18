@@ -404,9 +404,78 @@ def cmd_cheat(args: list[str], scripts_dir: Path) -> None:
         os.execvp("bash", ["bash", str(script)])
 
 
-def cmd_loadout(args: list[str], scripts_dir: Path) -> None:
-    script = scripts_dir / "loadout.sh"
-    os.execvp("bash", ["bash", str(script)] + args)
+def cmd_loadout(args: list[str], scripts_dir: Path | None = None) -> None:
+    """Install missing dev tools using the detected package manager."""
+    pm = _detect_pkg_manager()
+
+    # (binary, pacman_pkg, apt_pkg, brew_pkg, manual_url)
+    TOOLS: list[tuple[str, str | None, str | None, str | None, str | None]] = [
+        ("fzf",          "fzf",          "fzf",           "fzf",       None),
+        ("inotifywait",  "inotify-tools","inotify-tools", None,        None),
+        ("lazygit",      "lazygit",      "lazygit",       "lazygit",   None),
+        ("bat",          "bat",          "bat",           "bat",       None),
+        ("eza",          "eza",          "eza",           "eza",       None),
+        ("rg",           "ripgrep",      "ripgrep",       "ripgrep",   None),
+        ("fd",           "fd",           "fd-find",       "fd",        None),
+        ("zoxide",       "zoxide",       "zoxide",        "zoxide",    None),
+        ("delta",        "git-delta",    "git-delta",     "git-delta", None),
+        ("starship",     "starship",     None,            "starship",  "https://starship.rs"),
+        ("fastfetch",    "fastfetch",    None,            "fastfetch", "https://github.com/fastfetch-cli/fastfetch"),
+        ("zellij",       "zellij",       None,            "zellij",    "https://zellij.dev"),
+    ]
+
+    missing = []
+    for binary, pacman_pkg, apt_pkg, brew_pkg, url in TOOLS:
+        if not _which_any([binary]):
+            pkg = {"pacman": pacman_pkg, "apt": apt_pkg, "brew": brew_pkg}.get(pm)
+            missing.append((binary, pkg, url))
+
+    if not missing:
+        print(c("  All tools already installed.", "GRN"))
+        return
+
+    print()
+    print(c("  INSTALLING TOOLS", "B", "CYN"))
+    print(hr())
+
+    installable = [(b, p) for b, p, _ in missing if p]
+    manual = [(b, u) for b, _, u in missing if not {"pacman": True, "apt": True, "brew": True}.get(pm) or
+              not next((p for bn, p, _ in missing if bn == b), None)]
+    manual = [(b, u) for b, p, u in missing if not p and u]
+    skip = [(b,) for b, p, u in missing if not p and not u]
+
+    if installable:
+        pkgs = [p for _, p in installable]
+        if pm == "pacman":
+            cmd = ["sudo", "pacman", "-S", "--noconfirm"] + pkgs
+        elif pm == "apt":
+            cmd = ["sudo", "apt", "install", "-y"] + pkgs
+        elif pm == "brew":
+            cmd = ["brew", "install"] + pkgs
+        else:
+            cmd = []
+
+        print(c(f"  Running: {' '.join(cmd)}", "DIM"))
+        print()
+        result = subprocess.run(cmd)
+        if result.returncode == 0:
+            for b, _ in installable:
+                print(f"  {c('✓', 'GRN')} {b}")
+        else:
+            print(c("  Install command failed — check output above.", "YLW"))
+
+    if manual:
+        print()
+        print(c("  Manual install required:", "YLW"))
+        for b, u in manual:
+            print(f"  {c('→', 'YLW')} {b}: {u}")
+
+    if skip:
+        print()
+        for (b,) in skip:
+            print(c(f"  {b}: no package available for {pm}", "DIM"))
+
+    print()
 
 
 # ── update ────────────────────────────────────────────────────────────────────
