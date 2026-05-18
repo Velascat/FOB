@@ -19,9 +19,8 @@ tests_root: tests
 # SyncingSolution (tray, fleet setup).
 # Reference: NetworkRuntime/README.md § OS symmetry invariant.
 
-# Minimum baseline — runs Custodian's generic C1-C8 only.
-# Add `plugins:` and `detectors:` here when this repo grows its own
-# `_custodian/` overlay layer (see OperationsCenter for a worked example).
+# OS-SYM1 / OS-SYM1S detectors enforce the package-manager symmetry invariant
+# across Python commands and shell tools. See .custodian/detectors.py.
 
 audit:
   cross_repo:
@@ -117,7 +116,7 @@ audit:
     - git_watcher
 
 detectors:
-  - module: ".custodian/detectors.py:build_oc_detectors"
+  - ".custodian/detectors.py:build_oc_detectors"
 
 tools:
   ruff: true
