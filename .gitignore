@@ -21,6 +21,7 @@ config/profiles/*.yaml
 !config/profiles/executorruntime.yaml
 !config/profiles/sourceregistry.yaml
 !config/profiles/rxp.yaml
+!config/profiles/platformdeployment.yaml
 !config/profiles/platformmanifest.yaml
 !config/profiles/repograph.yaml
 !config/profiles/protocolwarden.github.io.yaml
