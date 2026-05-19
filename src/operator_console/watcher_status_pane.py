@@ -1193,7 +1193,7 @@ _HINT_CHUNKS: tuple[str, ...] = (
     "Enter Actions",
     "c Collapse",
     "x Collapse All",
-    "o Expand All",
+    "e Expand All",
     "r Refresh",
     "? Hints",
     "q Quit",
@@ -1872,7 +1872,7 @@ def _pane(stdscr, profile_name: str) -> None:
                 for sid in list(collapsed_sections):
                     collapsed_sections[sid] = True
                 top_scroll_offset = 0
-            elif key == ord("o"):
+            elif key == ord("e"):
                 for sid in list(collapsed_sections):
                     collapsed_sections[sid] = False
             elif key == ord("r"):

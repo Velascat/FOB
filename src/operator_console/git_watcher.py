@@ -38,7 +38,7 @@ _HINT_CHUNKS: tuple[str, ...] = (
     "g Next Group",
     "c Collapse Group",
     "x Collapse All",
-    "o Expand All",
+    "e Expand All",
     "r Refresh",
     "? Hints",
     "q Quit",
@@ -222,7 +222,8 @@ def _build_vbuf(
             else:
                 hdr_text = f" {chevron} {label}  ({len(grp_repos)} repos, {tag})"
 
-            vbuf.append(SEP)
+            if vbuf:  # no leading sep before the very first group
+                vbuf.append(SEP)
             vbuf.append((hdr_text[: w - 1], attr))
 
         else:
@@ -250,6 +251,8 @@ def _build_vbuf(
             else:
                 vbuf.append((line, c_attr))
 
+    if vbuf:
+        vbuf.append(SEP)
     return vbuf, sel_vrow
 
 
@@ -277,8 +280,9 @@ def _draw(
     right = f"{ts}{spin}  "
     pad   = max(0, w - 1 - len(title) - len(right))
     hdr   = (title + " " * pad + right)[: w - 1]
-    _put(stdscr, 0, h, w, hdr, C["HEAD"] | curses.A_BOLD)
-    _sep(stdscr, 1, h, w, C["DIM"])
+    _sep(stdscr, 0, h, w, C["DIM"])
+    _put(stdscr, 1, h, w, hdr, C["HEAD"] | curses.A_BOLD)
+    _sep(stdscr, 2, h, w, C["DIM"])
 
     # ── hints footer (anchored) ───────────────────────────────────────────────
     if hints_collapsed:
@@ -286,15 +290,16 @@ def _draw(
     else:
         hint_lines = [" " + ln for ln in _wrap_hints(_HINT_CHUNKS, max(1, w - 2))]
     hint_h      = len(hint_lines)
-    footer_rows = 1 + hint_h
+    footer_rows = 2 + hint_h   # sep-above + hints + sep-below
     body_bottom = h - footer_rows
 
     _sep(stdscr, body_bottom, h, w, C["DIM"])
     for i, line in enumerate(hint_lines):
         _put(stdscr, body_bottom + 1 + i, h, w, line, C["DIM"])
+    _sep(stdscr, body_bottom + 1 + hint_h, h, w, C["DIM"])
 
     # ── scrollable body ───────────────────────────────────────────────────────
-    body_h   = max(0, body_bottom - 2)
+    body_h   = max(0, body_bottom - 3)  # rows 0-2 are sep/header/sep
     vbuf, sel_vrow = _build_vbuf(
         groups, items, statuses, branches, sel_item, collapsed_groups, w, C
     )
@@ -302,7 +307,7 @@ def _draw(
 
     visible = vbuf[scroll_offset: scroll_offset + body_h]
     for screen_row, (text, attr) in enumerate(visible):
-        _put(stdscr, 2 + screen_row, h, w, text, attr)
+        _put(stdscr, 3 + screen_row, h, w, text, attr)
 
     stdscr.refresh()
     return sel_vrow, total_vrows
@@ -399,7 +404,7 @@ def _watcher(stdscr, repos: list[str]) -> None:
             hint_h = 1
         else:
             hint_h = len(_wrap_hints(_HINT_CHUNKS, max(1, w - 2)))
-        body_h = max(1, h - 2 - 1 - hint_h)  # h - header(2) - sep(1) - hints
+        body_h = max(1, h - 3 - 2 - hint_h)  # h - sep/header/sep(3) - sep-above-hints(1) - hints - sep-below-hints(1)
 
         sel_vrow, total_vrows = _draw(
             stdscr, groups, items, s_snap, b_snap,
@@ -466,7 +471,7 @@ def _watcher(stdscr, repos: list[str]) -> None:
             _clamp_sel()
             scroll_offset = 0
 
-        elif key == ord("o"):
+        elif key == ord("e"):
             collapsed_groups.clear()
             scroll_offset = 0
 
