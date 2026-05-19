@@ -1,5 +1,5 @@
 name: CoreRunner
-repo_root: /home/dev/Documents/GitHub/ExecutorRuntime
+repo_root: /home/dev/Documents/GitHub/CoreRunner
 
 claude:
   continue: true

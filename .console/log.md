@@ -1,5 +1,9 @@
 # Log
 
+## 2026-05-19 — Update corerunner.yaml repo_root to CoreRunner/
+
+Local directory renamed ExecutorRuntime/ → CoreRunner/. Updated profile path and GitHub repo remote URL.
+
 ## 2026-05-19 — ADR 0006 Phase 5: rename ExecutorRuntime → CoreRunner in OperatorConsole
 
 - config/profiles/executorruntime.yaml → corerunner.yaml; name: CoreRunner.
