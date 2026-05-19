@@ -295,7 +295,7 @@ def _draw(
 
     _sep(stdscr, body_bottom, h, w, C["DIM"])
     for i, line in enumerate(hint_lines):
-        _put(stdscr, body_bottom + 1 + i, h, w, line, C["DIM"])
+        _put(stdscr, body_bottom + 1 + i, h, w, line, C["MUTED"])
     _sep(stdscr, body_bottom + 1 + hint_h, h, w, C["DIM"])
 
     # ── scrollable body ───────────────────────────────────────────────────────
@@ -332,8 +332,9 @@ def _watcher(stdscr, repos: list[str]) -> None:
         "YLW":  curses.color_pair(3),
         "ERR":  curses.color_pair(4),
         "GRP":  curses.color_pair(5),
-        "HEAD": curses.color_pair(6),
-        "DIM":  curses.A_DIM,
+        "HEAD":  curses.color_pair(6),
+        "DIM":   curses.A_DIM,
+        "MUTED": curses.color_pair(6),  # white without A_DIM — brighter than DIM
     }
 
     statuses: dict[str, tuple | None] = {r: None for r in repos}

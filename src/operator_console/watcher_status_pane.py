@@ -1023,13 +1023,13 @@ def _bottom_sections(data: dict, C: dict) -> list[dict]:
     # ── 1. System Resources (raw host state) ──
     sr_lines: list[tuple[str, int]] = [
         (" System Resources", C["HEAD"] | curses.A_BOLD),
-        (f"  {'':15}  {'1 Min':>7} {'5 Min':>7} {'15 Min':>7}", C["DIM"]),
+        (f"  {'':15}  {'1 Min':>7} {'5 Min':>7} {'15 Min':>7}", C["MUTED"]),
     ]
     load_str = res.get('load', '?')
     parts = load_str.split('/') if '/' in load_str else ['?', '?', '?']
     sr_lines.append((
         f"  {'Processes/Queue':15}  {parts[0]:>7} {parts[1]:>7} {parts[2]:>7}",
-        C["DIM"],
+        C["MUTED"],
     ))
     load_pct_str = res.get('load_pct', '?')
     num_cores = res.get('num_cores', 0)
@@ -1038,14 +1038,14 @@ def _bottom_sections(data: dict, C: dict) -> list[dict]:
     sr_lines.append((
         f"  {'CPU Utilization':15}  {pct_parts[0]:>7} {pct_parts[1]:>7} "
         f"{pct_parts[2]:>7}  {cores_str}",
-        C["DIM"],
+        C["MUTED"],
     ))
     mp  = res.get("mem_pct", 0)
     mug = res.get("mem_used_gb", 0)
     mtg = res.get("mem_total_gb", 0)
     sr_lines.append((
         f"  {'RAM':15}  {_bar(mp):>7} {mp:>3d}%  {mug:.1f}/{mtg:.1f}G",
-        C["YLW"] if mp > 80 else C["DIM"],
+        C["YLW"] if mp > 80 else C["MUTED"],
     ))
     if res.get("swap_total_gb", 0) > 0:
         sp  = res.get("swap_pct", 0)
@@ -1053,7 +1053,7 @@ def _bottom_sections(data: dict, C: dict) -> list[dict]:
         stg = res.get("swap_total_gb", 0)
         sr_lines.append((
             f"  {'Swap':15}  {_bar(sp):>7} {sp:>3d}%  {sug:.1f}/{stg:.1f}G",
-            C["YLW"] if sp > 50 else C["DIM"],
+            C["YLW"] if sp > 50 else C["MUTED"],
         ))
     sections.append({"id": "system_resources", "lines": sr_lines, "sel_local": -1})
 
@@ -1494,7 +1494,7 @@ def _draw_main(
     _sep(stdscr, h - 1, h, w, C["DIM"])
     # Hint rows occupy h-2 down to h-1-hint_h.
     for i, ln in enumerate(hint_lines):
-        put(h - 1 - hint_h + i, ln, C["DIM"])
+        put(h - 1 - hint_h + i, ln, C["MUTED"])
     _sep(stdscr, h - 2 - hint_h, h, w, C["DIM"])
     if flash:
         put(h - 3 - hint_h, f" {flash}", C["HEAD"])
@@ -1607,7 +1607,8 @@ def _pane(stdscr, profile_name: str) -> None:
 
     C = {
         "RUN":  curses.color_pair(1),
-        "DIM":  curses.color_pair(2) | curses.A_DIM,
+        "DIM":   curses.color_pair(2) | curses.A_DIM,
+        "MUTED": curses.color_pair(2),  # white without A_DIM — brighter than DIM
         "HEAD": curses.color_pair(3),
         "SEL":  curses.color_pair(4),
         # YLW + ERR get A_BOLD so they're bright on dark terminals —
