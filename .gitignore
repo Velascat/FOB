@@ -24,6 +24,10 @@ config/profiles/*.yaml
 !config/profiles/platformmanifest.yaml
 !config/profiles/repograph.yaml
 !config/profiles/protocolwarden.github.io.yaml
+!config/profiles/protocolwarden.yaml
+!config/profiles/teamexecutor.yaml
+!config/profiles/dagexecutor.yaml
+!config/profiles/critiqueexecutor.yaml
 
 # Saved tab layouts, session IDs, and generated rc files (always private)
 config/profiles/*.kdl

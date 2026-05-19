@@ -1,0 +1,17 @@
+name: CritiqueExecutor
+repo_root: /home/dev/Documents/GitHub/CritiqueExecutor
+
+claude:
+  continue: true
+  bootstrap_files: []
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  shell:
+    command: bash
+
+helpers:
+  test: .venv/bin/pytest -q
+  audit: .venv/bin/ruff check src/

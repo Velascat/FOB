@@ -1,0 +1,16 @@
+name: ProtocolWarden
+repo_root: /home/dev/Documents/GitHub/ProtocolWarden
+
+claude:
+  continue: true
+  bootstrap_files: []
+  peers: []
+
+panes:
+  git:
+    command: lazygit
+  shell:
+    command: bash
+
+helpers:
+  preview: "cat README.md | head -60"

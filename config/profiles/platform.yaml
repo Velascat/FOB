@@ -4,6 +4,7 @@ group:
   - operator_console
   - repograph
   - protocolwarden.github.io
+  - protocolwarden
   - switchboard
   - platformdeployment
   - custodian
@@ -12,3 +13,6 @@ group:
   - sourceregistry
   - rxp
   - platformmanifest
+  - teamexecutor
+  - dagexecutor
+  - critiqueexecutor

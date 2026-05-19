@@ -291,3 +291,7 @@ top block flows behind them.
 
 - Added CLAUDE.md to .gitignore
 - Added .custodian/tmp*.yaml to exclude custodian audit temp files
+
+### ADR 0005 — Add executor repos to platform profile (2026-05-18)
+Added teamexecutor, dagexecutor, critiqueexecutor, protocolwarden to platform group.
+Created profile yamls for each with lazygit git pane and standard helpers.
