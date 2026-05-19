@@ -1,5 +1,13 @@
 # Log
 
+## 2026-05-19 — ADR 0006 Phase 5: rename ExecutorRuntime → CoreRunner in OperatorConsole
+
+- config/profiles/executorruntime.yaml → corerunner.yaml; name: CoreRunner.
+- config/profiles/platform.yaml: executorruntime → corerunner group entry.
+- src/operator_console/git_watcher.py: "ExecutorRuntime" → "CoreRunner" in Executors frozenset.
+- repo_root path in corerunner.yaml intentionally still points to ExecutorRuntime/ dir — will update after Phase 6 GitHub rename.
+- 121 of 129 tests pass; 8 pre-existing watcher_pane failures unrelated to this change.
+
 ## 2026-05-19 — Suppressed pre-existing C29/D11 custodian findings (git_watcher.py)
 
 Added C29 suppression for git_watcher.py (518 lines, same rationale as other TUI

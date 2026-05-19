@@ -9,7 +9,7 @@ group:
   - platformdeployment
   - custodian
   - cxrp
-  - executorruntime
+  - corerunner
   - sourceregistry
   - rxp
   - platformmanifest
