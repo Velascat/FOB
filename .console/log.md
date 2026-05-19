@@ -1,5 +1,11 @@
 # Log
 
+## 2026-05-19 — Removed live kodo/archon references from src
+
+Updated watcher_status_pane.py docstring (kodo → executor campaigns). Updated
+demo.py YAML example (kodo: section → team_executor:, binary: kodo → team-executor).
+Updated providers.py backend entry (kodo → team_executor with TeamExecutor install URL).
+
 ## 2026-05-13 — WorkStation → PlatformDeployment hard cutover
 
 - Updated `README.md` and `docs/history/` to replace all `WorkStation`/`workstation` references with `PlatformDeployment`/`platformdeployment`.

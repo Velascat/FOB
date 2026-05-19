@@ -60,7 +60,7 @@ def _section(title: str) -> None:
 
 
 # Minimal OperationsCenter config sufficient for the demo execute entrypoint.
-# Only kodo/aider settings matter for adapter construction; plane/repos
+# Only team_executor/aider settings matter for adapter construction; plane/repos
 # are required fields but unused during single-task execution.
 _DEMO_CP_CONFIG = """\
 plane:
@@ -70,8 +70,8 @@ plane:
   project_id: demo
 git:
   provider: github
-kodo:
-  binary: kodo
+team_executor:
+  binary: team-executor
 repos: {}
 """
 

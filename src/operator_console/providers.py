@@ -52,7 +52,7 @@ def _find_repo(name: str) -> Path:
 
 # Backend definitions: (display_name, candidate_binaries, install_hint)
 _BACKENDS = [
-    ("kodo",        ["kodo", "kodo-cli"],   "pip install kodo"),
+    ("team_executor", ["team-executor"],    "pip install git+https://github.com/ProtocolWarden/TeamExecutor.git"),
     ("claude_cli",  ["claude"],             "https://claude.ai/download"),
     ("codex_cli",   ["codex"],              "npm install -g @openai/codex"),
     ("aider_local", ["aider"],              "pip install aider-chat"),

@@ -4,7 +4,7 @@
 
 Sections (always visible):
   Roles       — running/stopped, pid, uptime, restart count (⚡)
-  Campaigns   — active kodo campaigns from OC state
+  Campaigns   — active executor campaigns from OC state
   Queue       — pending tasks filtered by --profile
   SwitchBoard — health check
   Resources   — load avg, RAM bar, swap bar
