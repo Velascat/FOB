@@ -1,5 +1,5 @@
-name: DagExecutor
-repo_root: /home/dev/Documents/GitHub/DagExecutor
+name: DAGExecutor
+repo_root: /home/dev/Documents/GitHub/DAGExecutor
 
 claude:
   continue: true
