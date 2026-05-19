@@ -390,6 +390,7 @@ def _watcher(stdscr, repos: list[str]) -> None:
         statuses[repo] = _git_status(repo)
         branches[repo] = _git_branch(repo)
 
+    curses.mousemask(curses.ALL_MOUSE_EVENTS)
     stdscr.timeout(500)
 
     while True:
@@ -479,6 +480,16 @@ def _watcher(stdscr, repos: list[str]) -> None:
 
         elif key == curses.KEY_NPAGE:
             scroll_offset = min(max(0, total_vrows - body_h), scroll_offset + body_h)
+
+        elif key == curses.KEY_MOUSE:
+            try:
+                _, _mx, _my, _mz, bstate = curses.getmouse()
+                if bstate & curses.BUTTON4_PRESSED:   # wheel up
+                    scroll_offset = max(0, scroll_offset - 3)
+                elif bstate & curses.BUTTON5_PRESSED:  # wheel down
+                    scroll_offset = min(max(0, total_vrows - body_h), scroll_offset + 3)
+            except curses.error:
+                pass
 
         elif key == ord("r"):
             with lock:
