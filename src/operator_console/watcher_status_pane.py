@@ -1193,6 +1193,7 @@ _HINT_CHUNKS: tuple[str, ...] = (
     "Enter Actions",
     "c Collapse",
     "x Collapse All",
+    "o Expand All",
     "r Refresh",
     "? Hints",
     "q Quit",
@@ -1865,13 +1866,15 @@ def _pane(stdscr, profile_name: str) -> None:
             elif key in (curses.KEY_ENTER, 10, 13):
                 mode = "action"
                 action_sel = 0
-            elif key == ord("?"):
+            elif key in (ord("?"), ord("/")):
                 hints_collapsed = not hints_collapsed
             elif key == ord("x"):
-                # Collapse every collapsible section in one keystroke.
                 for sid in list(collapsed_sections):
                     collapsed_sections[sid] = True
                 top_scroll_offset = 0
+            elif key == ord("o"):
+                for sid in list(collapsed_sections):
+                    collapsed_sections[sid] = False
             elif key == ord("r"):
                 with lock:
                     data.update({"roles": dict(_empty_roles), "campaigns": [],
