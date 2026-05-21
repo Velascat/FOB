@@ -1,5 +1,11 @@
 # Log
 
+## 2026-05-21 — Add ContextLifecycleProtocol to platform group and git watcher
+
+Added contextlifecycleprotocol to platform.yaml group list.
+Added "Cognition" group to git_watcher.py _GROUPS (between Executors and Contracts)
+containing ContextLifecycleProtocol. Profile yaml was already on main.
+
 ## 2026-05-19 — Update corerunner.yaml repo_root to CoreRunner/
 
 Local directory renamed ExecutorRuntime/ → CoreRunner/. Updated profile path and GitHub repo remote URL.
