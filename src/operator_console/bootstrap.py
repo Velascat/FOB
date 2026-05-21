@@ -315,7 +315,8 @@ def ensure_claude_md(
     extra_files: list[str] | None = None,
 ) -> None:
     claude_md = repo_root / "CLAUDE.md"
-    marker = "<!-- console-context -->"
+    marker      = "<!-- console-context -->"
+    end_marker  = "<!-- /console-context -->"
 
     extra_lines = ""
     if extra_files:
@@ -345,15 +346,24 @@ The context file contains your current task, guidelines, backlog, log, and runti
 
 After meaningful progress, update `.console/backlog.md` and `.console/log.md`.
 Do not edit `.console/.context` directly — it is regenerated at each launch.
-"""
+{end_marker}"""
     if claude_md.exists():
         import re
         existing = claude_md.read_text(encoding="utf-8")
-        if marker in existing:
-            # Replace existing marked block
+        if marker in existing and end_marker in existing:
+            # Replace only the fenced managed block; preserve content outside it
+            new_text = re.sub(
+                r"<!-- console-context -->.*?<!-- /console-context -->",
+                block,
+                existing,
+                flags=re.DOTALL,
+            )
+            claude_md.write_text(new_text.rstrip() + "\n", encoding="utf-8")
+        elif marker in existing:
+            # Old format without closing fence — replace to end of file, append tail if any
             new_text = re.sub(
                 r"<!-- console-context -->.*",
-                block.strip(),
+                block,
                 existing,
                 flags=re.DOTALL,
             )
@@ -362,7 +372,7 @@ Do not edit `.console/.context` directly — it is regenerated at each launch.
             # Old format without marker — replace from that heading onward
             new_text = re.sub(
                 r"## OperatorConsole Context.*",
-                block.strip(),
+                block,
                 existing,
                 flags=re.DOTALL,
             )

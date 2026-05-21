@@ -18,3 +18,4 @@ The context file contains your current task, guidelines, backlog, log, and runti
 
 After meaningful progress, update `.console/backlog.md` and `.console/log.md`.
 Do not edit `.console/.context` directly — it is regenerated at each launch.
+<!-- /console-context -->

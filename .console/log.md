@@ -1,5 +1,11 @@
 # Log
 
+## 2026-05-21 — Fix console-context block overwriting repo-owned CLAUDE.md content
+
+bootstrap.py rewrote CLAUDE.md from the open marker to EOF (DOTALL), nuking anything below
+the OC block. Fix: add <!-- /console-context --> closing fence; regex now replaces only the
+fenced region. All existing CLAUDE.md files migrated to add the closing fence.
+
 ## 2026-05-21 — Add ContextLifecycleProtocol to platform group and git watcher
 
 Added contextlifecycleprotocol to platform.yaml group list.
