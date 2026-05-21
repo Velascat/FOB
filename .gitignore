@@ -28,6 +28,7 @@ config/profiles/*.yaml
 !config/profiles/teamexecutor.yaml
 !config/profiles/dagexecutor.yaml
 !config/profiles/critiqueexecutor.yaml
+!config/profiles/contextlifecycleprotocol.yaml
 
 # Saved tab layouts, session IDs, and generated rc files (always private)
 config/profiles/*.kdl
