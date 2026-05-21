@@ -25,6 +25,7 @@ from pathlib import Path
 _GROUPS: list[tuple[str, frozenset[str]]] = [
     ("Orchestration", frozenset({"OperationsCenter", "SwitchBoard"})),
     ("Executors",     frozenset({"TeamExecutor", "DAGExecutor", "CritiqueExecutor", "CoreRunner"})),
+    ("Cognition",     frozenset({"ContextLifecycleProtocol"})),
     ("Contracts",     frozenset({"CxRP", "RxP"})),
     ("Platform",      frozenset({"PlatformDeployment", "PlatformManifest", "Custodian", "SourceRegistry"})),
     ("Console",       frozenset({"OperatorConsole"})),
